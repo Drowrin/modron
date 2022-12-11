@@ -1,10 +1,19 @@
+<div align="center">
+
 # Modron
+
+[![ci](https://github.com/drowrin/modron/actions/workflows/ci.yml/badge.svg)](https://github.com/drowrin/modron/actions/workflows/ci.yml)
+![mypy](https://badgen.net/badge/mypy/checked/)
+![code-style-black](https://badgen.net/badge/code-style/black/black)
+![python-version-3.11](https://badgen.net/badge/python/3%2E11/blue)
 
 A Discord bot providing organization tools for TTRPG groups.
 
-This project is currently very early in development.
+</div>
 
 ## Features and Roadmap
+
+This project is currently very early in development.
 
 - [x] Suggestion and feedback channels
   - [x] Allow users to create tickets for feedback, suggestions, concerns, or ideas
