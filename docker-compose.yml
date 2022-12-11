@@ -1,0 +1,5 @@
+services:
+  modron:
+    build: .
+    volumes:
+      - ./dev.config.yml:/modron/config.yml

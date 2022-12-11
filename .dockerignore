@@ -1,0 +1,13 @@
+# virtual environment
+.venv
+
+# CI / cache
+.nox
+.mypy_cache
+**/__pycache__
+
+# build
+dist
+
+# prevent Dockerfile from causing cache invalidation on very early build steps
+Dockerfile

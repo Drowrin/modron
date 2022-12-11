@@ -1,0 +1,15 @@
+# virtual environment
+.venv
+
+# CI / cache
+.nox
+.mypy_cache
+__pycache__
+
+# actual config files should be ignored
+*config.yml
+# however, the example config file should be included
+!example.config.yml
+
+# build
+dist
