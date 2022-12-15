@@ -5,6 +5,7 @@
 .nox
 .mypy_cache
 __pycache__
+poetry.lock
 
 # actual config files should be ignored
 *config.yml
