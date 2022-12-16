@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS Games (
     id SERIAL,
     name VARCHAR(100) NOT NULL,
-    description VARCHAR(4096) NOT NULL,
-    system VARCHAR(100) NOT NULL,
+    description VARCHAR(4000) NOT NULL,
+    system VARCHAR(36) NOT NULL,
 
     guild_id BIGINT NOT NULL,
     owner_id BIGINT NOT NULL,
