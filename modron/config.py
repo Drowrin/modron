@@ -10,6 +10,8 @@ import yaml
 class Config:
     discord_token: str
 
+    db_url: str
+
     @classmethod
     def load(cls, path: Path) -> Config:
         with path.open("r") as f:

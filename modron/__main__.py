@@ -4,8 +4,8 @@ import sys
 from pathlib import Path
 
 import flare
-from crescent import Bot
 
+from modron.app import ModronApp
 from modron.config import Config
 
 # CLI args
@@ -27,9 +27,7 @@ if not args.config.exists() or not args.config.is_file():
 
 # load config and initialize bot
 config = Config.load(args.config)
-bot = Bot(
-    token=config.discord_token,
-)
+bot = ModronApp(config)
 flare.install(bot)
 bot.plugins.load_folder("modron.plugins")
 

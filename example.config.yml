@@ -1,1 +1,4 @@
 discord_token: 
+
+# postgresql://username:password@host:port/database
+db_url: 
