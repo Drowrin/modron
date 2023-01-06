@@ -21,7 +21,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "3.11.*"
 uvloop = {version = "0.17.0", markers = "sys_platform != 'win32'"}
-hikari = {extras = ["speedups"], version = "2.0.0.dev113"}
+hikari = {extras = ["speedups"], version = "2.0.0.dev115"}
 hikari-crescent = {extras = ["cron"], version = "0.4.0"}
 hikari-flare = "0.1.0b3"
 pyyaml = "6.0"
