@@ -11,7 +11,7 @@ class DBConn:
         conn = await asyncpg.connect(url)
 
         # TODO: remove
-        await conn.execute("DROP TABLE Players;" "DROP TABLE Characters;" "DROP TABLE Games;")
+        await conn.execute("DROP TABLE Players;" "DROP TABLE Characters;" "DROP TABLE Games; DROP TYPE game_status;")
 
         with open("modron/db/schema.sql") as f:
             await conn.execute(f.read())

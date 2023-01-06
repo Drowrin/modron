@@ -1,3 +1,5 @@
+CREATE TYPE game_status AS ENUM ('unstarted', 'running', 'paused', 'finished');
+
 CREATE TABLE IF NOT EXISTS Games (
     id SERIAL,
     name VARCHAR(100) NOT NULL,
@@ -6,6 +8,13 @@ CREATE TABLE IF NOT EXISTS Games (
 
     guild_id BIGINT NOT NULL,
     owner_id BIGINT NOT NULL,
+
+    status game_status NOT NULL DEFAULT 'unstarted',
+    seeking_players BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMP NOT NULL DEFAULT (now() at time zone 'utc'),
+
+    image VARCHAR(256),
 
     category_id BIGINT,
     main_channel_id BIGINT,
