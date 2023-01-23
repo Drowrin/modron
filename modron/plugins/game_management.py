@@ -1,7 +1,8 @@
+import datetime
+
 import crescent
 import flare
 import hikari
-import datetime
 
 from modron.app import ModronApp, ModronPlugin
 
@@ -32,7 +33,7 @@ async def create_game_menu(app: ModronApp, game_id: int) -> tuple[hikari.Embed, 
         title=game["name"],
         description=game["description"],
         # hikari will check the timezone, so we need to explicitly set this to utc
-        timestamp=game['created_at'].replace(tzinfo=datetime.timezone.utc),
+        timestamp=game["created_at"].replace(tzinfo=datetime.timezone.utc),
         color=STATUS_COLORS.get(
             game["status"],
             "DDDDDD",  # unknown status color for some reason? might be better to error here and figure out why?
@@ -85,7 +86,7 @@ class GameCreateModal(flare.Modal, title="Create a new game!"):
         embed, row = await create_game_menu(ctx.app, game_id)
 
         await ctx.respond(
-            f"You can view this menu again with </game create:{ctx.interaction.}>",
+            f"You can view this menu again with </game create:{ctx.interaction.id}>",
             embed=embed,
             component=row or hikari.UNDEFINED,
         )
@@ -117,39 +118,39 @@ class GameCreate:
         await GameCreateModal(self.system).set_title(f"New {self.system} Game").send(ctx.interaction)
 
 
-async def autocomplete_games(ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption) -> list[hikari.CommandChoice]:
+async def autocomplete_games(
+    ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
+) -> list[hikari.CommandChoice]:
     assert isinstance(ctx.app, ModronApp)
-    
+
     results = await ctx.app.db.fetch(
         "SELECT id, name FROM Games WHERE guild_id = $1 AND name LIKE $2 LIMIT 25;",
         ctx.guild_id,
         f"{option.value}%",
     )
 
-    return [hikari.CommandChoice(name=r['name'], value=str(r['id'])) for r in results]
+    return [hikari.CommandChoice(name=r["name"], value=str(r["id"])) for r in results]
 
 
 @plugin.include
 @game.child
 @crescent.command(name="menu", description="view the menu for a specific game")
 class GameMenu:
-    name = crescent.option(
-        str, "the name of the game", autocomplete=autocomplete_games
-    )
-    
+    name = crescent.option(str, "the name of the game", autocomplete=autocomplete_games)
+
     async def callback(self, ctx: crescent.Context) -> None:
         assert isinstance(ctx.app, ModronApp)
-        
+
         try:
             game_id = int(self.name)
         except ValueError:
             await ctx.respond(
-                'Please select an autocomplete suggestion',
+                "Please select an autocomplete suggestion",
                 flags=hikari.MessageFlag.EPHEMERAL,
             )
         else:
             embed, row = await create_game_menu(ctx.app, game_id)
-            
+
             await ctx.respond(
                 embed=embed,
                 component=row or hikari.UNDEFINED,
