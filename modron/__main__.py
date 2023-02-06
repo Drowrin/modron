@@ -3,7 +3,9 @@ import os
 import sys
 from pathlib import Path
 
+import crescent
 import flare
+import hikari
 
 from modron.app import ModronApp
 from modron.config import Config
@@ -27,9 +29,12 @@ if not args.config.exists() or not args.config.is_file():
 
 # load config and initialize bot
 config = Config.load(args.config)
-bot = ModronApp(config)
+bot = hikari.GatewayBot(
+    token=config.discord_token,
+)
 flare.install(bot)
-bot.plugins.load_folder("modron.plugins")
+client = crescent.Client(bot)
+client.plugins.load_folder("modron.plugins")
 
 # run forever
 bot.run()

@@ -4,9 +4,8 @@ import crescent
 import flare
 import hikari
 
-from modron.app import ModronPlugin
 
-plugin = ModronPlugin()
+plugin = crescent.Plugin[hikari.GatewayBot, None]()
 feedback = crescent.Group(
     "feedback",
     "feedback channel management",
