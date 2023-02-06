@@ -3,7 +3,6 @@
 # Modron
 
 [![ci](https://github.com/drowrin/modron/actions/workflows/ci.yml/badge.svg)](https://github.com/drowrin/modron/actions/workflows/ci.yml)
-![mypy](https://badgen.net/badge/mypy/checked/)
 ![code-style-black](https://badgen.net/badge/code-style/black/black)
 ![python-version-3.11](https://badgen.net/badge/python/3%2E11/blue)
 
