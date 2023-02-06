@@ -1,0 +1,4 @@
+-r requirements-nox.txt
+-r requirements-tools.txt
+-r requirements.txt
+-r requirements-types.txt

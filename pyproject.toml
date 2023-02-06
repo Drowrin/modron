@@ -2,39 +2,11 @@
 line-length = 120
 target-version = ['py311']
 
-[tool.mypy]
-python_version = 3.11
-strict = true
-
 [tool.isort]
 profile = "black"
 line_length = 120
 
-[tool.poetry]
-name = "modron"
-version = "0.0.0"
-description = ""
-authors = ["drowrin <drowrin@gmail.com>"]
-readme = "README.md"
-license = "MIT"
-
-[tool.poetry.dependencies]
-python = "3.11.*"
-uvloop = {version = "0.17.0", markers = "sys_platform != 'win32'"}
-hikari = {extras = ["speedups"], version = "2.0.0.dev115"}
-hikari-crescent = {extras = ["cron"], version = "0.4.0"}
-hikari-flare = "0.1.0b3"
-pyyaml = "6.0"
-types-pyyaml = "6.0.12.3"
-
-[tool.poetry.group.dev.dependencies]
-# git version for Self support
-mypy = {git = "https://github.com/python/mypy.git"}
-black = "^22.3"
-isort = "^5.10.1"
-nox = "^2022.11.21"
-codespell = "^2.2.2"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.pyright]
+include = ["modron"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
