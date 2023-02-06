@@ -4,7 +4,6 @@ import crescent
 import flare
 import hikari
 
-
 plugin = crescent.Plugin[hikari.GatewayBot, None]()
 feedback = crescent.Group(
     "feedback",
