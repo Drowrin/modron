@@ -15,6 +15,7 @@ class Config:
     @classmethod
     def load(cls, path: Path) -> Config:
         with path.open("r") as f:
-            config = yaml.load(f.read(), yaml.Loader)
+            # this has to be type ignored for now, as there is an issue with types-pyyaml
+            config = yaml.load(f.read(), yaml.Loader)  # type: ignore
 
         return cls(**config)
