@@ -4,9 +4,9 @@ import crescent
 import flare
 import hikari
 
-from modron.app import ModronApp, ModronPlugin
+from modron.model import Model
 
-plugin = ModronPlugin()
+plugin = crescent.Plugin[hikari.GatewayBot, Model]()
 game = crescent.Group(
     "game",
     "game management",
@@ -22,8 +22,8 @@ STATUS_COLORS = {
 }
 
 
-async def create_game_menu(app: ModronApp, game_id: int) -> tuple[hikari.Embed, flare.Row | None]:
-    game = await app.db.fetchrow("SELECT * from Games WHERE id = $1;", game_id)
+async def create_game_menu(app: hikari.RESTAware, game_id: int) -> tuple[hikari.Embed, flare.Row | None]:
+    game = await plugin.model.db.fetchrow("SELECT * from Games WHERE id = $1;", game_id)
 
     if game is None:
         # an error message
@@ -70,12 +70,10 @@ class GameCreateModal(flare.Modal, title="Create a new game!"):
         assert self.description.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
-        # assert the bot type
-        assert isinstance(ctx.app, ModronApp)
 
         await ctx.defer()
 
-        game_id = await ctx.app.db.insert_game(
+        game_id = await plugin.model.db.insert_game(
             name=self.name.value,
             description=self.description.value,
             system=self.system,
@@ -95,9 +93,7 @@ class GameCreateModal(flare.Modal, title="Create a new game!"):
 async def autocomplete_systems(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    assert isinstance(ctx.app, ModronApp)
-
-    results = await ctx.app.db.fetch(
+    results = await plugin.model.db.fetch(
         "SELECT DISTINCT system FROM Games WHERE guild_id = $1 AND system LIKE $2 LIMIT 25;",
         ctx.guild_id,
         f"{option.value}%",
@@ -121,9 +117,7 @@ class GameCreate:
 async def autocomplete_games(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    assert isinstance(ctx.app, ModronApp)
-
-    results = await ctx.app.db.fetch(
+    results = await plugin.model.db.fetch(
         "SELECT id, name FROM Games WHERE guild_id = $1 AND name LIKE $2 LIMIT 25;",
         ctx.guild_id,
         f"{option.value}%",
@@ -139,8 +133,6 @@ class GameMenu:
     name = crescent.option(str, "the name of the game", autocomplete=autocomplete_games)
 
     async def callback(self, ctx: crescent.Context) -> None:
-        assert isinstance(ctx.app, ModronApp)
-
         try:
             game_id = int(self.name)
         except ValueError:
