@@ -17,7 +17,7 @@ jobs:
       with:
         python-version: "3.11"
     - name: Install Nox
-      run: pip install -r requirements-nox.txt
+      run: pip install -r requirements/nox.txt
     - name: lint
       run: nox -s lint
     - name: typecheck
