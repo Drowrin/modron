@@ -5,10 +5,15 @@ import typing
 import asyncpg
 
 
+class ModronRecord(asyncpg.Record):
+    def __getattr__(self, name: str) -> typing.Any:
+        return self[name]
+
+
 class DBConn:
     @classmethod
     async def connect(cls, url: str) -> DBConn:
-        conn = await asyncpg.connect(url)
+        conn = await asyncpg.connect(url, record_class=ModronRecord)
 
         # TODO: remove
         await conn.execute("DROP TABLE Players;" "DROP TABLE Characters;" "DROP TABLE Games; DROP TYPE game_status;")
@@ -18,7 +23,7 @@ class DBConn:
 
         return cls(conn)
 
-    def __init__(self, conn: asyncpg.Connection[asyncpg.Record]) -> None:
+    def __init__(self, conn: asyncpg.Connection[ModronRecord]) -> None:
         self.conn = conn
 
     async def close(self) -> None:
@@ -80,8 +85,8 @@ class DBConn:
     async def fetchval(self, query: str, *args: object) -> typing.Any:
         return await self.conn.fetchval(query, *args)
 
-    async def fetchrow(self, query: str, *args: object) -> asyncpg.Record | None:
+    async def fetchrow(self, query: str, *args: object) -> ModronRecord | None:
         return await self.conn.fetchrow(query, *args)
 
-    async def fetch(self, query: str, *args: object) -> list[asyncpg.Record]:
+    async def fetch(self, query: str, *args: object) -> list[ModronRecord]:
         return await self.conn.fetch(query, *args)
