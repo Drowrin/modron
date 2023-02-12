@@ -24,4 +24,4 @@ def fixes(session: nox.Session):
 
     session.run("black", "modron")
     session.run("isort", "modron")
-    session.run("codespell", "modron", "-i", "2")
+    session.run("codespell", "modron", "-i", "2", "-w")
