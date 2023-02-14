@@ -1,3 +1,6 @@
+from crescent import Plugin
+from hikari import GatewayBot
+
 from modron.config import Config
 from modron.db import DBConn
 
@@ -12,3 +15,6 @@ class Model:
 
     async def close(self) -> None:
         await self.db.close()
+
+
+ModronPlugin = Plugin[GatewayBot, Model]

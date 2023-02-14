@@ -4,10 +4,10 @@ import crescent
 import flare
 import hikari
 
-from modron.model import Model
+from modron.model import ModronPlugin
 from modron.utils import get_me
 
-plugin = crescent.Plugin[hikari.GatewayBot, Model]()
+plugin = ModronPlugin()
 feedback = crescent.Group(
     "feedback",
     "feedback channel management",

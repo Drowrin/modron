@@ -8,6 +8,7 @@ import flare
 import hikari
 
 from modron.config import Config
+from modron.exceptions import ModronError
 from modron.model import Model
 
 # CLI args
@@ -48,6 +49,21 @@ async def on_start(_: hikari.StartingEvent) -> None:
     While the bot is starting, initialize async resources such as database connections.
     """
     await model.start()
+
+
+@bot.listen(hikari.ExceptionEvent)
+async def on_modron_error(event: hikari.ExceptionEvent[hikari.Event]):
+    """
+    If an error is raised that the bot can report to the user, report it to the user.
+    Otherwise, rereaise the exception.
+    """
+    if not isinstance(event.exception, ModronError) or not isinstance(event.failed_event, hikari.InteractionCreateEvent):
+        raise event.exception
+
+    interaction = event.failed_event.interaction
+    await event.app.rest.create_interaction_response(
+        interaction, interaction.token, hikari.ResponseType.MESSAGE_CREATE, **event.exception.to_response_args()
+    )
 
 
 # run forever
