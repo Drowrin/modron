@@ -27,7 +27,7 @@ class DBConn:
 
         with open("modron/db/schema.sql") as f:
             await conn.execute(f.read())
-        
+
         # TODO: remove
         # instance = cls(conn)
         # await instance.insert_game(
@@ -70,7 +70,17 @@ class DBConn:
     async def close(self) -> None:
         await self.conn.close()
 
-    async def insert_game(self, *, name: str, description: str, system: str, guild_id: int, owner_id: int, image: str | None = None, thumb: str | None = None) -> Game:
+    async def insert_game(
+        self,
+        *,
+        name: str,
+        description: str,
+        system: str,
+        guild_id: int,
+        owner_id: int,
+        image: str | None = None,
+        thumb: str | None = None,
+    ) -> Game:
         row = await self.conn.fetchrow(
             "INSERT INTO Games (name, description, system, guild_id, owner_id, image, thumb)"
             "VALUES ($1, $2, $3, $4, $5, $6, $7)"
@@ -81,7 +91,7 @@ class DBConn:
             guild_id,
             owner_id,
             image,
-            thumb
+            thumb,
         )
 
         assert row is not None
@@ -89,69 +99,80 @@ class DBConn:
         return Game(**dict(row))
 
     async def get_game(self, game_id: int, guild_id: int) -> Game | None:
-        record = await self.fetchrow("""
+        record = await self.fetchrow(
+            """
             SELECT *
             FROM Games
             WHERE game_id = $1 AND guild_id = $2;
-            """, game_id, guild_id
+            """,
+            game_id,
+            guild_id,
         )
 
         if record is not None:
             return Game(**dict(record))
-    
+
     async def get_owned_game(self, game_id: int, owner_id: int) -> Game | None:
-        record = await self.fetchrow("""
+        record = await self.fetchrow(
+            """
             SELECT *
             FROM Games
             WHERE game_id = $1 AND owner_id = $2;
-            """, game_id, owner_id)
-        
+            """,
+            game_id,
+            owner_id,
+        )
+
         if record is not None:
             return Game(**dict(record))
 
     async def update_game(self, game_id: int, guild_id: int, **kwargs: typing.Any) -> Game:
         count = len(kwargs)
         if count == 0:
-            raise TypeError('0 values passed to update_game')
-        
+            raise TypeError("0 values passed to update_game")
+
         # these only come from code, so I feel okay about constructing a query string from them
-        columns = ', '.join(kwargs.keys())
+        columns = ", ".join(kwargs.keys())
         # these are only parameter references and will be processed by asyncpg rather than direct interpolation
-        values = ', '.join(f'${n + 3}' for n in range(count))
-        
+        values = ", ".join(f"${n + 3}" for n in range(count))
+
         row = await self.fetchrow(
             f"UPDATE Games SET ({columns}) = ({values}) WHERE game_id = $1 AND guild_id = $2 RETURNING *;",
-            game_id, guild_id, *kwargs.values()
+            game_id,
+            guild_id,
+            *kwargs.values(),
         )
 
         assert row is not None
 
         return Game(**dict(row))
-    
+
     async def count_game_characters(self, game_id: int) -> int:
-        val = await self.conn.fetchval("""
+        val = await self.conn.fetchval(
+            """
             SELECT COUNT(character_id)
             FROM Characters
             WHERE game_id = $1
             """,
-            game_id
+            game_id,
         )
-        
+
         assert isinstance(val, int)
-        
+
         return val
-    
+
     async def count_game_players(self, game_id: int) -> int:
-        val = await self.conn.fetchval("""
+        val = await self.conn.fetchval(
+            """
             SELECT COUNT((user_id, game_id))
             FROM Players
             WHERE game_id = $1
             """,
-            game_id
+            game_id,
         )
-        
+
         assert isinstance(val, int)
-        
+
         return val
 
     async def insert_character(

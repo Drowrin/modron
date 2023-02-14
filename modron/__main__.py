@@ -57,7 +57,9 @@ async def on_modron_error(event: hikari.ExceptionEvent[hikari.Event]):
     If an error is raised that the bot can report to the user, report it to the user.
     Otherwise, rereaise the exception.
     """
-    if not isinstance(event.exception, ModronError) or not isinstance(event.failed_event, hikari.InteractionCreateEvent):
+    if not isinstance(event.exception, ModronError) or not isinstance(
+        event.failed_event, hikari.InteractionCreateEvent
+    ):
         raise event.exception
 
     interaction = event.failed_event.interaction

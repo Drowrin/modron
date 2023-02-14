@@ -47,7 +47,7 @@ flare.add_converter(Game, GameConverter)
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     char_count = await plugin.model.db.count_game_characters(game.game_id)
     player_count = await plugin.model.db.count_game_players(game.game_id)
-    
+
     embed = (
         hikari.Embed(
             title=game.name,
@@ -62,10 +62,9 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
         .add_field("Characters", str(char_count), inline=True)
         .add_field("Players", str(player_count), inline=True)
     )
-    
-    return [
-        embed
-    ]
+
+    return [embed]
+
 
 async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
@@ -76,7 +75,7 @@ async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuil
 
 class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Change Status"):
     game: Game
-    
+
     @classmethod
     def from_game(cls, game: Game) -> StatusSelect:
         return cls(game).set_options(
@@ -123,15 +122,15 @@ class ToggleSeekingPlayers(flare.Button):
 
 class EditButton(flare.Button, label="Edit Details"):
     game: Game
-    
+
     @classmethod
     def from_game(cls, game: Game) -> EditButton:
         return cls(game)
-    
+
     async def callback(self, ctx: flare.MessageContext) -> None:
         if ctx.user.id != self.game.owner_id:
             raise GamePermissionError(self.game.game_id)
-        
+
         await GameEditModal.from_game(self.game).send(ctx.interaction)
 
 
@@ -167,6 +166,7 @@ game_thumb_text_input = flare.TextInput(
     required=False,
 )
 
+
 class GameCreateModal(flare.Modal):
     system: str
 
@@ -174,7 +174,7 @@ class GameCreateModal(flare.Modal):
     description: flare.TextInput = game_description_text_input
     image: flare.TextInput = game_image_text_input
     thumb: flare.TextInput = game_thumb_text_input
-    
+
     @classmethod
     def from_system(cls, system: str) -> GameCreateModal:
         return cls(system).set_title(f"New {system} Game")
@@ -209,12 +209,12 @@ class GameCreateModal(flare.Modal):
 
 class GameEditModal(flare.Modal, title="Edit Game"):
     game: Game
-    
+
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
     image: flare.TextInput = game_image_text_input
     thumb: flare.TextInput = game_thumb_text_input
-    
+
     @classmethod
     def from_game(cls, game: Game):
         instance = cls(game)
@@ -224,9 +224,9 @@ class GameEditModal(flare.Modal, title="Edit Game"):
             instance.image.set_value(game.image)
         if game.thumb is not None:
             instance.thumb.set_value(game.thumb)
-        
+
         return instance
-    
+
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
@@ -235,7 +235,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         assert ctx.guild_id is not None
 
         await ctx.defer()
-        
+
         game = await plugin.model.db.update_game(
             game_id=self.game.game_id,
             guild_id=ctx.guild_id,
@@ -245,7 +245,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
             image=self.image.value or None,
             thumb=self.thumb.value or None,
         )
-        
+
         await ctx.edit_response(
             embeds=await game_display(game),
             components=await game_main_menu(game),
@@ -296,7 +296,7 @@ async def autocomplete_owned_games(
         ctx.user.id,
         f"{option.value}%",
     )
-    
+
     return [hikari.CommandChoice(name=r["name"], value=str(r["game_id"])) for r in results]
 
 
