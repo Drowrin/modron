@@ -7,6 +7,7 @@ def lint(session: nox.Session):
 
     session.run("black", "--check", "modron")
     session.run("isort", "-c", "modron")
+    session.run("ruff", "check", "modron")
     session.run("codespell", "modron")
 
 
@@ -24,4 +25,5 @@ def fixes(session: nox.Session):
 
     session.run("black", "modron")
     session.run("isort", "modron")
+    session.run("ruff", "--fix", "modron")
     session.run("codespell", "modron", "-i", "2", "-w")
