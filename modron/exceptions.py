@@ -21,7 +21,7 @@ class GameError(ModronError):
         self.game_id = game_id
 
 
-class GameNotFound(GameError):
+class GameNotFoundError(GameError):
     def __init__(self, game_id: int) -> None:
         super().__init__(f"Game with id {game_id} not found!", game_id)
 

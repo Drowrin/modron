@@ -9,7 +9,7 @@ import hikari
 import hikari.api
 
 from modron.db.models import Game, GameStatus
-from modron.exceptions import GameError, GameNotFound, GamePermissionError
+from modron.exceptions import GameError, GameNotFoundError, GamePermissionError
 from modron.model import ModronPlugin
 
 plugin = ModronPlugin()
@@ -22,7 +22,7 @@ game = crescent.Group(
 
 
 @plugin.include
-@crescent.catch_command(GameError, GamePermissionError, GameNotFound)
+@crescent.catch_command(GameError, GamePermissionError, GameNotFoundError)
 async def on_game_not_found(exc: GameError, ctx: crescent.Context) -> None:
     await ctx.respond(**exc.to_response_args())
 
@@ -36,7 +36,7 @@ class GameConverter(flare.Converter[Game]):
         game = await plugin.model.db.get_game(int(game_id), int(guild_id))
 
         if game is None:
-            raise GameNotFound(game_id=int(game_id))
+            raise GameNotFoundError(game_id=int(game_id))
 
         return game
 
@@ -200,7 +200,7 @@ class GameCreateModal(flare.Modal):
         )
 
         await ctx.respond(
-            f"You can view this menu again with `/game menu`",
+            "You can view this menu again with `/game menu`",
             embeds=await game_display(game),
             components=await game_main_menu(game),
             flags=hikari.MessageFlag.EPHEMERAL,
@@ -321,7 +321,7 @@ class GameSettings:
         game = await plugin.model.db.get_owned_game(game_id, ctx.user.id)
 
         if game is None:
-            raise GameNotFound(game_id)
+            raise GameNotFoundError(game_id)
 
         await ctx.respond(
             embeds=await game_display(game),
@@ -353,7 +353,7 @@ class GameInfo:
         game = await plugin.model.db.get_game(game_id, ctx.guild_id)
 
         if game is None:
-            raise GameNotFound(game_id)
+            raise GameNotFoundError(game_id)
 
         await ctx.respond(
             embeds=await game_display(game),
