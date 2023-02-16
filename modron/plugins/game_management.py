@@ -255,7 +255,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 async def autocomplete_systems(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    results = await plugin.model.db.fetch(
+    results = await plugin.model.db.conn.fetch(
         "SELECT DISTINCT system FROM Games WHERE guild_id = $1 AND system LIKE $2 LIMIT 25;",
         ctx.guild_id,
         f"{option.value}%",
@@ -279,7 +279,7 @@ class GameCreate:
 async def autocomplete_guild_games(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    results = await plugin.model.db.fetch(
+    results = await plugin.model.db.conn.fetch(
         "SELECT game_id, name FROM Games WHERE guild_id = $1 AND name LIKE $2 LIMIT 25;",
         ctx.guild_id,
         f"{option.value}%",
@@ -291,7 +291,7 @@ async def autocomplete_guild_games(
 async def autocomplete_owned_games(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    results = await plugin.model.db.fetch(
+    results = await plugin.model.db.conn.fetch(
         "SELECT game_id, name FROM Games WHERE owner_id = $1 AND name LIKE $2 LIMIT 25;",
         ctx.user.id,
         f"{option.value}%",

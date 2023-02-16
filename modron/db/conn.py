@@ -99,7 +99,7 @@ class DBConn:
         return Game(**dict(row))
 
     async def get_game(self, game_id: int, guild_id: int) -> Game | None:
-        record = await self.fetchrow(
+        record = await self.conn.fetchrow(
             """
             SELECT *
             FROM Games
@@ -113,7 +113,7 @@ class DBConn:
             return Game(**dict(record))
 
     async def get_owned_game(self, game_id: int, owner_id: int) -> Game | None:
-        record = await self.fetchrow(
+        record = await self.conn.fetchrow(
             """
             SELECT *
             FROM Games
@@ -136,7 +136,7 @@ class DBConn:
         # these are only parameter references and will be processed by asyncpg rather than direct interpolation
         values = ", ".join(f"${n + 3}" for n in range(count))
 
-        row = await self.fetchrow(
+        row = await self.conn.fetchrow(
             f"UPDATE Games SET ({columns}) = ({values}) WHERE game_id = $1 AND guild_id = $2 RETURNING *;",
             game_id,
             guild_id,
@@ -211,15 +211,3 @@ class DBConn:
             character_id,
             role,
         )
-
-    async def fetchval(self, query: str, *args: object) -> typing.Any:
-        return await self.conn.fetchval(query, *args)
-
-    async def fetchrow(self, query: str, *args: object) -> ModronRecord | None:
-        return await self.conn.fetchrow(query, *args)
-
-    async def fetch(self, query: str, *args: object) -> list[ModronRecord]:
-        return await self.conn.fetch(query, *args)
-
-    async def exec(self, query: str, *args: object) -> None:
-        await self.conn.execute(query, *args)
