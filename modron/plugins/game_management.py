@@ -8,7 +8,7 @@ import flare
 import hikari
 import hikari.api
 
-from modron.db.models import Game, GameStatus
+from modron.db import Game, GameStatus
 from modron.exceptions import GameError, GameNotFoundError, GamePermissionError
 from modron.model import ModronPlugin
 
@@ -33,15 +33,15 @@ class GameConverter(flare.Converter[Game]):
 
     async def from_str(self, obj: str) -> Game:
         guild_id, game_id = obj.split(":")
-        return await plugin.model.db.get_game(int(game_id), int(guild_id))
+        return await plugin.model.games.get(int(game_id), int(guild_id))
 
 
 flare.add_converter(Game, GameConverter)
 
 
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
-    char_count = await plugin.model.db.count_game_characters(game.game_id)
-    player_count = await plugin.model.db.count_game_players(game.game_id)
+    char_count = await plugin.model.characters.count(game.game_id)
+    player_count = await plugin.model.players.count(game.game_id)
 
     embed = (
         hikari.Embed(
@@ -91,7 +91,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
             raise GamePermissionError(self.game.game_id)
 
         assert ctx.guild_id is not None
-        game = await plugin.model.db.update_game(self.game.game_id, ctx.guild_id, status=ctx.values[0])
+        game = await plugin.model.games.update(self.game.game_id, ctx.guild_id, status=ctx.values[0])
 
         await ctx.edit_response(embeds=await game_display(game), components=await game_main_menu(game))
 
@@ -108,7 +108,7 @@ class ToggleSeekingPlayers(flare.Button):
             raise GamePermissionError(self.game.game_id)
 
         assert ctx.guild_id is not None
-        game = await plugin.model.db.update_game(
+        game = await plugin.model.games.update(
             self.game.game_id, ctx.guild_id, seeking_players=not self.game.seeking_players
         )
 
@@ -183,7 +183,7 @@ class GameCreateModal(flare.Modal):
 
         await ctx.defer()
 
-        game = await plugin.model.db.insert_game(
+        game = await plugin.model.games.insert(
             name=self.name.value,
             description=self.description.value,
             system=self.system,
@@ -231,7 +231,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
         await ctx.defer()
 
-        game = await plugin.model.db.update_game(
+        game = await plugin.model.games.update(
             game_id=self.game.game_id,
             guild_id=ctx.guild_id,
             name=self.name.value,
@@ -250,13 +250,11 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 async def autocomplete_systems(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    results = await plugin.model.db.conn.fetch(
-        "SELECT DISTINCT system FROM Games WHERE guild_id = $1 AND system LIKE $2 LIMIT 25;",
-        ctx.guild_id,
-        f"{option.value}%",
-    )
+    assert ctx.guild_id is not None
 
-    return [hikari.CommandChoice(name=r[0], value=r[0]) for r in results]
+    results = await plugin.model.games.autocomplete_systems(ctx.guild_id, str(option.value))
+
+    return [hikari.CommandChoice(name=r, value=r) for r in results]
 
 
 @plugin.include
@@ -274,25 +272,19 @@ class GameCreate:
 async def autocomplete_guild_games(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    results = await plugin.model.db.conn.fetch(
-        "SELECT game_id, name FROM Games WHERE guild_id = $1 AND name LIKE $2 LIMIT 25;",
-        ctx.guild_id,
-        f"{option.value}%",
-    )
+    assert ctx.guild_id is not None
 
-    return [hikari.CommandChoice(name=r["name"], value=str(r["game_id"])) for r in results]
+    results = await plugin.model.games.autocomplete_guild(ctx.guild_id, str(option.value))
+
+    return [hikari.CommandChoice(name=name, value=str(game_id)) for name, game_id in results]
 
 
 async def autocomplete_owned_games(
     ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
 ) -> list[hikari.CommandChoice]:
-    results = await plugin.model.db.conn.fetch(
-        "SELECT game_id, name FROM Games WHERE owner_id = $1 AND name LIKE $2 LIMIT 25;",
-        ctx.user.id,
-        f"{option.value}%",
-    )
+    results = await plugin.model.games.autocomplete_owned(ctx.user.id, str(option.value))
 
-    return [hikari.CommandChoice(name=r["name"], value=str(r["game_id"])) for r in results]
+    return [hikari.CommandChoice(name=name, value=str(game_id)) for name, game_id in results]
 
 
 @plugin.include
@@ -313,7 +305,7 @@ class GameSettings:
 
         await ctx.defer(ephemeral=True)
 
-        game = await plugin.model.db.get_owned_game(game_id, ctx.user.id)
+        game = await plugin.model.games.get_owned(game_id, ctx.user.id)
 
         await ctx.respond(
             embeds=await game_display(game),
@@ -342,7 +334,7 @@ class GameInfo:
 
         await ctx.defer()
 
-        game = await plugin.model.db.get_game(game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id, ctx.guild_id)
 
         await ctx.respond(
             embeds=await game_display(game),
