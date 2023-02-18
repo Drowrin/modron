@@ -273,7 +273,6 @@ async def autocomplete_owned_games(
 @crescent.command(
     name="settings",
     description="view the settings menu for a specific game",
-    default_member_permissions=hikari.Permissions.MANAGE_CHANNELS | hikari.Permissions.MANAGE_MESSAGES,
 )
 class GameSettings:
     name = crescent.option(str, "the name of the game", autocomplete=autocomplete_owned_games)
