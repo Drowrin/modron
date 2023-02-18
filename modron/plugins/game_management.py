@@ -270,10 +270,7 @@ async def autocomplete_owned_games(
 
 @plugin.include
 @game.child
-@crescent.command(
-    name="settings",
-    description="view the settings menu for a specific game",
-)
+@crescent.command(name="settings", description="view the settings menu for a specific game")
 class GameSettings:
     name = crescent.option(str, "the name of the game", autocomplete=autocomplete_owned_games)
 
