@@ -8,7 +8,8 @@ import flare
 import hikari
 
 from modron.config import Config
-from modron.exceptions import ModronError
+from modron.db import Game
+from modron.exceptions import GameError, GameNotFoundError, GamePermissionError, ModronError
 from modron.model import Model
 
 # CLI args
@@ -66,6 +67,24 @@ async def on_modron_error(event: hikari.ExceptionEvent[hikari.Event]):
     await event.app.rest.create_interaction_response(
         interaction, interaction.token, hikari.ResponseType.MESSAGE_CREATE, **event.exception.to_response_args()
     )
+
+
+@client.include
+@crescent.catch_command(ModronError, GameError, GamePermissionError, GameNotFoundError)
+async def on_game_error(exc: ModronError, ctx: crescent.Context) -> None:
+    await ctx.respond(**exc.to_response_args())
+
+
+class GameConverter(flare.Converter[Game]):
+    async def to_str(self, obj: Game) -> str:
+        return f"{obj.guild_id}:{obj.game_id}"
+
+    async def from_str(self, obj: str) -> Game:
+        guild_id, game_id = obj.split(":")
+        return await model.games.get(int(game_id), int(guild_id))
+
+
+flare.add_converter(Game, GameConverter)
 
 
 # run forever

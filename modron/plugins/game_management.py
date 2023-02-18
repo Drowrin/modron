@@ -9,7 +9,7 @@ import hikari
 import hikari.api
 
 from modron.db import Game, GameStatus
-from modron.exceptions import GameError, GameNotFoundError, GamePermissionError
+from modron.exceptions import GamePermissionError
 from modron.model import ModronPlugin
 
 plugin = ModronPlugin()
@@ -18,24 +18,6 @@ game = crescent.Group(
     "game management",
     dm_enabled=False,
 )
-
-
-@plugin.include
-@crescent.catch_command(GameError, GamePermissionError, GameNotFoundError)
-async def on_game_error(exc: GameError, ctx: crescent.Context) -> None:
-    await ctx.respond(**exc.to_response_args())
-
-
-class GameConverter(flare.Converter[Game]):
-    async def to_str(self, obj: Game) -> str:
-        return f"{obj.guild_id}:{obj.game_id}"
-
-    async def from_str(self, obj: str) -> Game:
-        guild_id, game_id = obj.split(":")
-        return await plugin.model.games.get(int(game_id), int(guild_id))
-
-
-flare.add_converter(Game, GameConverter)
 
 
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
