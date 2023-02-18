@@ -23,7 +23,7 @@ game = crescent.Group(
 
 @plugin.include
 @crescent.catch_command(GameError, GamePermissionError, GameNotFoundError)
-async def on_game_not_found(exc: GameError, ctx: crescent.Context) -> None:
+async def on_game_error(exc: GameError, ctx: crescent.Context) -> None:
     await ctx.respond(**exc.to_response_args())
 
 
@@ -33,12 +33,7 @@ class GameConverter(flare.Converter[Game]):
 
     async def from_str(self, obj: str) -> Game:
         guild_id, game_id = obj.split(":")
-        game = await plugin.model.db.get_game(int(game_id), int(guild_id))
-
-        if game is None:
-            raise GameNotFoundError(game_id=int(game_id))
-
-        return game
+        return await plugin.model.db.get_game(int(game_id), int(guild_id))
 
 
 flare.add_converter(Game, GameConverter)
@@ -320,9 +315,6 @@ class GameSettings:
 
         game = await plugin.model.db.get_owned_game(game_id, ctx.user.id)
 
-        if game is None:
-            raise GameNotFoundError(game_id)
-
         await ctx.respond(
             embeds=await game_display(game),
             components=await game_main_menu(game),
@@ -351,9 +343,6 @@ class GameInfo:
         await ctx.defer()
 
         game = await plugin.model.db.get_game(game_id, ctx.guild_id)
-
-        if game is None:
-            raise GameNotFoundError(game_id)
 
         await ctx.respond(
             embeds=await game_display(game),

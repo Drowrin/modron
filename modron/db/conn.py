@@ -5,6 +5,7 @@ import typing
 import asyncpg
 
 from modron.db.models import Game
+from modron.exceptions import GameNotFoundError
 
 
 class ModronRecord(asyncpg.Record):
@@ -56,7 +57,7 @@ class DBConn:
 
         return Game(**dict(row))
 
-    async def get_game(self, game_id: int, guild_id: int) -> Game | None:
+    async def get_game(self, game_id: int, guild_id: int) -> Game:
         record = await self.conn.fetchrow(
             """
             SELECT *
@@ -67,10 +68,12 @@ class DBConn:
             guild_id,
         )
 
-        if record is not None:
-            return Game(**dict(record))
+        if record is None:
+            raise GameNotFoundError(game_id)
 
-    async def get_owned_game(self, game_id: int, owner_id: int) -> Game | None:
+        return Game(**dict(record))
+
+    async def get_owned_game(self, game_id: int, owner_id: int) -> Game:
         record = await self.conn.fetchrow(
             """
             SELECT *
@@ -81,8 +84,10 @@ class DBConn:
             owner_id,
         )
 
-        if record is not None:
-            return Game(**dict(record))
+        if record is None:
+            raise GameNotFoundError(game_id=game_id)
+
+        return Game(**dict(record))
 
     async def update_game(self, game_id: int, guild_id: int, **kwargs: typing.Any) -> Game:
         count = len(kwargs)
