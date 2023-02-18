@@ -17,50 +17,8 @@ class DBConn:
     async def connect(cls, url: str) -> DBConn:
         conn = await asyncpg.connect(url, record_class=ModronRecord)
 
-        # TODO: remove
-        # await conn.execute(
-        #     "DROP TABLE IF EXISTS Players;"
-        #     "DROP TABLE IF EXISTS Characters;"
-        #     "DROP TABLE IF EXISTS Games;"
-        #     "DROP TYPE IF EXISTS game_status;"
-        # )
-
         with open("modron/db/schema.sql") as f:
             await conn.execute(f.read())
-
-        # TODO: remove
-        # instance = cls(conn)
-        # await instance.insert_game(
-        #     name='Dummy',
-        #     description='L',
-        #     system='L',
-        #     guild_id=1049383163199230042,
-        #     owner_id=81149671447207936,
-        # )
-        # game: Game = await instance.insert_game(
-        #     name='Test Game',
-        #     description='Test Description',
-        #     system='D&D 5e',
-        #     guild_id=1049383163199230042,
-        #     owner_id=81149671447207936,
-        # )
-        # character_id: int = await instance.insert_character(
-        #     game_id=game.game_id,
-        #     author_id=81149671447207936,
-        #     name="Sample Character",
-        #     brief="Brief Description",
-        #     description="Lorem Ipsum Long Description Text ETC",
-        # )
-        # await instance.insert_player(
-        #     user_id=81149671447207936,
-        #     game_id=game.game_id,
-        #     role="GM",
-        #     character_id=character_id,
-        # )
-        # print(await instance.fetch("SELECT * from Games;"))
-        # print(await instance.fetch("SELECT * from Characters;"))
-        # print(await instance.fetch("SELECT * from Players;"))
-        # print(await instance.get_game(game.game_id, 1049383163199230042))
 
         return cls(conn)
 
