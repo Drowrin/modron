@@ -1,3 +1,10 @@
+-- TODO: REMOVE
+DROP TABLE IF EXISTS Players;
+DROP TABLE IF EXISTS Characters;
+DROP TABLE IF EXISTS Games;
+DROP TYPE IF EXISTS game_status;
+-- 
+
 DO $$ BEGIN
     CREATE TYPE game_status AS ENUM ('unstarted', 'running', 'paused', 'finished');
 EXCEPTION

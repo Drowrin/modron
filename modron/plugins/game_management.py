@@ -9,7 +9,7 @@ import hikari
 import hikari.api
 
 from modron.db import Game, GameStatus
-from modron.exceptions import GameError, GameNotFoundError, GamePermissionError
+from modron.exceptions import GamePermissionError
 from modron.model import ModronPlugin
 
 plugin = ModronPlugin()
@@ -18,24 +18,6 @@ game = crescent.Group(
     "game management",
     dm_enabled=False,
 )
-
-
-@plugin.include
-@crescent.catch_command(GameError, GamePermissionError, GameNotFoundError)
-async def on_game_error(exc: GameError, ctx: crescent.Context) -> None:
-    await ctx.respond(**exc.to_response_args())
-
-
-class GameConverter(flare.Converter[Game]):
-    async def to_str(self, obj: Game) -> str:
-        return f"{obj.guild_id}:{obj.game_id}"
-
-    async def from_str(self, obj: str) -> Game:
-        guild_id, game_id = obj.split(":")
-        return await plugin.model.games.get(int(game_id), int(guild_id))
-
-
-flare.add_converter(Game, GameConverter)
 
 
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
@@ -291,7 +273,6 @@ async def autocomplete_owned_games(
 @crescent.command(
     name="settings",
     description="view the settings menu for a specific game",
-    default_member_permissions=hikari.Permissions.MANAGE_CHANNELS | hikari.Permissions.MANAGE_MESSAGES,
 )
 class GameSettings:
     name = crescent.option(str, "the name of the game", autocomplete=autocomplete_owned_games)
