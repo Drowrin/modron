@@ -15,6 +15,11 @@ class ModronError(Exception):
         }
 
 
+class ConfirmationError(ModronError):
+    def __init__(self) -> None:
+        super().__init__("Confirmation input did not match!")
+
+
 class GameError(ModronError):
     def __init__(self, message: str, game_id: int) -> None:
         super().__init__(message)
