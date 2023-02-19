@@ -91,6 +91,12 @@ class GameDB(DBConn):
 
         return Game(**dict(row))
 
+    async def delete(self, game_id: int) -> None:
+        await self.conn.execute(
+            "DELETE FROM Games WHERE game_id = $1;",
+            game_id,
+        )
+
     async def autocomplete_guild(self, guild_id: int, partial_name: str) -> list[tuple[str, str]]:
         results = await self.conn.fetch(
             "SELECT game_id, name FROM Games WHERE guild_id = $1 AND name LIKE $2 LIMIT 25;",

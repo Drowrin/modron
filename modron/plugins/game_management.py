@@ -9,7 +9,7 @@ import hikari
 import hikari.api
 
 from modron.db import Game, GameStatus
-from modron.exceptions import GamePermissionError
+from modron.exceptions import ConfirmationError, GamePermissionError
 from modron.model import ModronPlugin
 
 plugin = ModronPlugin()
@@ -45,7 +45,11 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
 async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
         flare.Row(StatusSelect.from_game(game)),
-        flare.Row(EditButton.from_game(game), ToggleSeekingPlayers.from_game(game)),
+        flare.Row(
+            EditButton.from_game(game),
+            ToggleSeekingPlayers.from_game(game),
+            DeleteButton.from_game(game),
+        ),
     )
 
 
@@ -108,6 +112,20 @@ class EditButton(flare.Button, label="Edit Details"):
             raise GamePermissionError(self.game.game_id)
 
         await GameEditModal.from_game(self.game).send(ctx.interaction)
+
+
+class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER):
+    game: Game
+
+    @classmethod
+    def from_game(cls, game: Game) -> DeleteButton:
+        return cls(game)
+
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise GamePermissionError(self.game.game_id)
+
+        await GameDeleteModal.from_game(self.game).send(ctx.interaction)
 
 
 game_name_text_input = flare.TextInput(
@@ -240,6 +258,31 @@ class GameEditModal(flare.Modal, title="Edit Game"):
             embeds=await game_display(game),
             components=await game_main_menu(game),
         )
+
+
+class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
+    game: Game
+
+    confirmation: flare.TextInput = flare.TextInput(
+        label='Please confirm by typing "CONFIRM" in caps',
+        placeholder="This can not be undone",
+        style=hikari.TextInputStyle.SHORT,
+        min_length=1,
+        required=True,
+    )
+
+    @classmethod
+    def from_game(cls, game: Game) -> GameDeleteModal:
+        return cls(game)
+
+    async def callback(self, ctx: flare.ModalContext) -> None:
+        if self.confirmation.value != "CONFIRM":
+            raise ConfirmationError()
+
+        await plugin.model.games.delete(self.game.game_id)
+        response = await ctx.edit_response("Game successfully deleted!", embeds=[], components=[])
+        await asyncio.sleep(5)
+        await response.delete()
 
 
 async def autocomplete_systems(
