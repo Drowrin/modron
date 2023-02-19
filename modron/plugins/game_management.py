@@ -216,7 +216,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
         )
 
         await ctx.respond(
-            "You can view this menu again with `/game menu`",
+            f"You can view this menu again with {plugin.model.mention_command('game settings')}",
             embeds=await game_display(game),
             components=await game_main_menu(game),
             flags=hikari.MessageFlag.EPHEMERAL,
