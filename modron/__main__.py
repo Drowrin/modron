@@ -75,7 +75,7 @@ async def on_modron_error(event: hikari.ExceptionEvent[hikari.Event]):
 
 @client.include
 @crescent.catch_command(ModronError)
-async def on_game_error(exc: ModronError, ctx: crescent.Context) -> None:
+async def on_modron_command_error(exc: ModronError, ctx: crescent.Context) -> None:
     await ctx.respond(**exc.to_response_args(), ephemeral=True)
 
 
