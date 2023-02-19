@@ -232,7 +232,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         }
 
         if len(kwargs) == 0:
-            return # nothing to update
+            return  # nothing to update
 
         game = await plugin.model.games.update(game_id=self.game.game_id, guild_id=ctx.guild_id, **kwargs)
 

@@ -75,10 +75,10 @@ class GameDB(DBConn):
         columns = ", ".join(kwargs.keys())
         # these are only parameter references and will be processed by asyncpg rather than direct interpolation
         values = ", ".join(f"${n + 3}" for n in range(count))
-        
+
         if count > 1:
-            columns = f'({columns})'
-            values = f'({values})'
+            columns = f"({columns})"
+            values = f"({values})"
 
         row = await self.conn.fetchrow(
             f"UPDATE Games SET {columns} = {values} WHERE game_id = $1 AND guild_id = $2 RETURNING *;",
