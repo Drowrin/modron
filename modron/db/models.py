@@ -48,3 +48,29 @@ class Game:
             status += " - Seeking Players"
 
         return status
+
+
+@attrs.define
+class Character:
+    character_id: int
+    game_id: int
+    author_id: int
+    
+    name: str
+    
+    brief: str
+    description: str
+    
+    pronouns: str | None = None
+    
+    image: str | None = None
+
+
+@attrs.define
+class Player:
+    user_id: int
+    game_id: int
+    
+    role: str
+    
+    characater_id: int | None = None
