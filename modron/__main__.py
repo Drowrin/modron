@@ -9,7 +9,7 @@ import hikari
 
 from modron.config import Config
 from modron.db import Game
-from modron.exceptions import ConfirmationError, GameError, GameNotFoundError, GamePermissionError, ModronError
+from modron.exceptions import ModronError
 from modron.model import Model
 
 # CLI args
@@ -74,7 +74,7 @@ async def on_modron_error(event: hikari.ExceptionEvent[hikari.Event]):
 
 
 @client.include
-@crescent.catch_command(ModronError, GameError, GamePermissionError, GameNotFoundError, ConfirmationError)
+@crescent.catch_command(ModronError)
 async def on_game_error(exc: ModronError, ctx: crescent.Context) -> None:
     await ctx.respond(**exc.to_response_args(), ephemeral=True)
 

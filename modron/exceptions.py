@@ -20,17 +20,11 @@ class ConfirmationError(ModronError):
         super().__init__("Confirmation input did not match!")
 
 
-class GameError(ModronError):
-    def __init__(self, message: str, game_id: int) -> None:
-        super().__init__(message)
-        self.game_id = game_id
-
-
-class GameNotFoundError(GameError):
+class GameNotFoundError(ModronError):
     def __init__(self, game_id: int) -> None:
-        super().__init__(f"Game with id {game_id} not found!", game_id)
+        super().__init__(f"Game with id {game_id} not found!")
 
 
-class GamePermissionError(GameError):
+class GamePermissionError(ModronError):
     def __init__(self, game_id: int) -> None:
-        super().__init__("You do not have permission to edit this game!", game_id)
+        super().__init__("You do not have permission to edit this game!")
