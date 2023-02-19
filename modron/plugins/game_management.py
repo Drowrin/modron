@@ -129,7 +129,7 @@ game_description_text_input = flare.TextInput(
 game_system_text_input = flare.TextInput(
     label="System",
     style=hikari.TextInputStyle.SHORT,
-    min_length=None,
+    min_length=1,
     max_length=35,
     required=True,
 )
