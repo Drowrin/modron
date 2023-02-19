@@ -15,10 +15,9 @@ class GameDB(DBConn):
         guild_id: int,
         owner_id: int,
         image: str | None = None,
-        thumb: str | None = None,
     ) -> Game:
         row = await self.conn.fetchrow(
-            "INSERT INTO Games (name, description, system, guild_id, owner_id, image, thumb)"
+            "INSERT INTO Games (name, description, system, guild_id, owner_id, image)"
             "VALUES ($1, $2, $3, $4, $5, $6, $7)"
             "RETURNING *;",
             name,
@@ -27,7 +26,6 @@ class GameDB(DBConn):
             guild_id,
             owner_id,
             image,
-            thumb,
         )
 
         assert row is not None

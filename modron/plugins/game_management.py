@@ -32,8 +32,7 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
             color=game.status.color,
         )
         .set_footer(game.status_str)
-        .set_image(game.image)
-        .set_thumbnail(game.thumb)
+        .set_thumbnail(game.image)
         .add_field("System", game.system, inline=True)
         .add_field("Characters", str(char_count), inline=True)
         .add_field("Players", str(player_count), inline=True)
@@ -160,21 +159,12 @@ game_image_text_input = flare.TextInput(
     required=False,
 )
 
-game_thumb_text_input = flare.TextInput(
-    label="Thumbnail URL",
-    style=hikari.TextInputStyle.SHORT,
-    min_length=None,
-    max_length=256,
-    required=False,
-)
-
 
 class GameCreateModal(flare.Modal, title="New Game"):
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
     system: flare.TextInput = game_system_text_input
     image: flare.TextInput = game_image_text_input
-    thumb: flare.TextInput = game_thumb_text_input
 
     @classmethod
     def from_details(
@@ -183,14 +173,12 @@ class GameCreateModal(flare.Modal, title="New Game"):
         name: str | None = None,
         description: str | None = None,
         image: str | None = None,
-        thumb: str | None = None,
     ) -> GameCreateModal:
         instance = cls()
         instance.name.set_value(name)
         instance.description.set_value(description)
         instance.system.set_value(system)
         instance.image.set_value(image)
-        instance.thumb.set_value(thumb)
 
         return instance
 
@@ -212,7 +200,6 @@ class GameCreateModal(flare.Modal, title="New Game"):
             owner_id=ctx.user.id,
             # replace '' with None
             image=self.image.value or None,
-            thumb=self.thumb.value or None,
         )
 
         await ctx.respond(
@@ -230,7 +217,6 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     description: flare.TextInput = game_description_text_input
     system: flare.TextInput = game_system_text_input
     image: flare.TextInput = game_image_text_input
-    thumb: flare.TextInput = game_thumb_text_input
 
     @classmethod
     def from_game(cls, game: Game) -> GameEditModal:
@@ -239,7 +225,6 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         instance.description.set_value(game.description)
         instance.system.set_value(game.system)
         instance.image.set_value(game.image)
-        instance.thumb.set_value(game.thumb)
 
         return instance
 
@@ -255,7 +240,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
         kwargs = {
             k: v
-            for k in ["name", "description", "system", "image", "thumb"]
+            for k in ["name", "description", "system", "image"]
             if (v := getattr(self, k).value or None) != getattr(self.game, k)
         }
 
@@ -333,12 +318,6 @@ class GameCreate:
         max_length=256,
         default=None,
     )
-    thumb = crescent.option(
-        str,
-        "URL pointing to an image that will be used as a thumbnail for the game (you can change this later)",
-        max_length=256,
-        default=None,
-    )
 
     async def callback(self, ctx: crescent.Context) -> None:
         await GameCreateModal.from_details(
@@ -346,7 +325,6 @@ class GameCreate:
             name=self.title,
             description=self.description,
             image=self.image,
-            thumb=self.thumb,
         ).send(ctx.interaction)
 
 

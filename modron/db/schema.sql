@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS Games (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (now() at time zone 'utc'),
 
     image VARCHAR(256),
-    thumb VARCHAR(256),
 
     category_id BIGINT,
     main_channel_id BIGINT,

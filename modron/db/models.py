@@ -32,7 +32,6 @@ class Game:
     created_at: datetime
 
     image: str | None = None
-    thumb: str | None = None
 
     category_id: int | None = None
     main_channel_id: int | None = None
@@ -55,14 +54,14 @@ class Character:
     character_id: int
     game_id: int
     author_id: int
-    
+
     name: str
-    
+
     brief: str
     description: str
-    
+
     pronouns: str | None = None
-    
+
     image: str | None = None
 
 
@@ -70,7 +69,7 @@ class Character:
 class Player:
     user_id: int
     game_id: int
-    
+
     role: str
-    
+
     characater_id: int | None = None
