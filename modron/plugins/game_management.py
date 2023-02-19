@@ -192,7 +192,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     thumb: flare.TextInput = game_thumb_text_input
 
     @classmethod
-    def from_game(cls, game: Game):
+    def from_game(cls, game: Game) -> GameEditModal:
         instance = cls(game)
         instance.name.set_value(game.name)
         instance.description.set_value(game.description)
