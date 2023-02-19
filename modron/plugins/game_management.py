@@ -46,8 +46,8 @@ async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuil
     return await asyncio.gather(
         flare.Row(StatusSelect.from_game(game)),
         flare.Row(
-            EditButton.from_game(game),
             ToggleSeekingPlayers.from_game(game),
+            EditButton.from_game(game),
             DeleteButton.from_game(game),
         ),
     )
