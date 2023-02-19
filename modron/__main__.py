@@ -49,7 +49,7 @@ async def on_start(_: hikari.StartingEvent) -> None:
     """
     While the bot is starting, initialize async resources such as database connections.
     """
-    await model.start()
+    await model.start(bot)
 
 
 @bot.listen(hikari.ExceptionEvent)
