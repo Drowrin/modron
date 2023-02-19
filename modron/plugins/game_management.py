@@ -177,9 +177,21 @@ class GameCreateModal(flare.Modal, title="New Game"):
     thumb: flare.TextInput = game_thumb_text_input
 
     @classmethod
-    def from_system(cls, system: str) -> GameCreateModal:
+    def from_details(
+        cls,
+        system: str,
+        name: str | None = None,
+        description: str | None = None,
+        image: str | None = None,
+        thumb: str | None = None,
+    ) -> GameCreateModal:
         instance = cls()
+        instance.name.set_value(name)
+        instance.description.set_value(description)
         instance.system.set_value(system)
+        instance.image.set_value(image)
+        instance.thumb.set_value(thumb)
+
         return instance
 
     async def callback(self, ctx: flare.ModalContext) -> None:
@@ -226,10 +238,8 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         instance.name.set_value(game.name)
         instance.description.set_value(game.description)
         instance.system.set_value(game.system)
-        if game.image is not None:
-            instance.image.set_value(game.image)
-        if game.thumb is not None:
-            instance.thumb.set_value(game.thumb)
+        instance.image.set_value(game.image)
+        instance.thumb.set_value(game.thumb)
 
         return instance
 
@@ -300,11 +310,44 @@ async def autocomplete_systems(
 @crescent.command(name="create", description="create a new game in this server")
 class GameCreate:
     system = crescent.option(
-        str, "The system this game will be using", autocomplete=autocomplete_systems, max_length=36
+        str,
+        "The system this game will be using (you can change this later)",
+        autocomplete=autocomplete_systems,
+        max_length=36,
+    )
+    title = crescent.option(
+        str,
+        "The display title of the game (you can change this later)",
+        max_length=100,
+        default=None,
+    )
+    description = crescent.option(
+        str,
+        "The description of the game (you can change this later)",
+        max_length=4000,
+        default=None,
+    )
+    image = crescent.option(
+        str,
+        "URL pointing to an image that will be used as a banner for the game (you can change this later)",
+        max_length=256,
+        default=None,
+    )
+    thumb = crescent.option(
+        str,
+        "URL pointing to an image that will be used as a thumbnail for the game (you can change this later)",
+        max_length=256,
+        default=None,
     )
 
     async def callback(self, ctx: crescent.Context) -> None:
-        await GameCreateModal.from_system(self.system).send(ctx.interaction)
+        await GameCreateModal.from_details(
+            system=self.system,
+            name=self.title,
+            description=self.description,
+            image=self.image,
+            thumb=self.thumb,
+        ).send(ctx.interaction)
 
 
 async def autocomplete_guild_games(
