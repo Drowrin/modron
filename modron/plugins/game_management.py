@@ -126,6 +126,14 @@ game_description_text_input = flare.TextInput(
     required=True,
 )
 
+game_system_text_input = flare.TextInput(
+    label="System",
+    style=hikari.TextInputStyle.SHORT,
+    min_length=None,
+    max_length=35,
+    required=True,
+)
+
 game_image_text_input = flare.TextInput(
     label="Image URL",
     style=hikari.TextInputStyle.SHORT,
@@ -143,22 +151,24 @@ game_thumb_text_input = flare.TextInput(
 )
 
 
-class GameCreateModal(flare.Modal):
-    system: str
-
+class GameCreateModal(flare.Modal, title="New Game"):
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
+    system: flare.TextInput = game_system_text_input
     image: flare.TextInput = game_image_text_input
     thumb: flare.TextInput = game_thumb_text_input
 
     @classmethod
     def from_system(cls, system: str) -> GameCreateModal:
-        return cls(system).set_title(f"New {system} Game")
+        instance = cls()
+        instance.system.set_value(system)
+        return instance
 
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
         assert self.description.value is not None
+        assert self.system.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -167,7 +177,7 @@ class GameCreateModal(flare.Modal):
         game = await plugin.model.games.insert(
             name=self.name.value,
             description=self.description.value,
-            system=self.system,
+            system=self.system.value,
             guild_id=ctx.guild_id,
             owner_id=ctx.user.id,
             # replace '' with None
@@ -188,6 +198,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
+    system: flare.TextInput = game_system_text_input
     image: flare.TextInput = game_image_text_input
     thumb: flare.TextInput = game_thumb_text_input
 
@@ -196,6 +207,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         instance = cls(game)
         instance.name.set_value(game.name)
         instance.description.set_value(game.description)
+        instance.system.set_value(game.system)
         if game.image is not None:
             instance.image.set_value(game.image)
         if game.thumb is not None:
@@ -207,20 +219,22 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         # these are marked as required, so they should not be None
         assert self.name.value is not None
         assert self.description.value is not None
+        assert self.system.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
         await ctx.defer()
 
-        game = await plugin.model.games.update(
-            game_id=self.game.game_id,
-            guild_id=ctx.guild_id,
-            name=self.name.value,
-            description=self.description.value,
-            # replace '' with None
-            image=self.image.value or None,
-            thumb=self.thumb.value or None,
-        )
+        kwargs = {
+            k: v
+            for k in ["name", "description", "system", "image", "thumb"]
+            if (v := getattr(self, k).value or None) != getattr(self.game, k)
+        }
+
+        if len(kwargs) == 0:
+            return # nothing to update
+
+        game = await plugin.model.games.update(game_id=self.game.game_id, guild_id=ctx.guild_id, **kwargs)
 
         await ctx.edit_response(
             embeds=await game_display(game),
