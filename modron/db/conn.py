@@ -36,11 +36,11 @@ async def connect(url: str) -> Pool:
 SpecT = typing.ParamSpec("SpecT")
 ReturnT = typing.TypeVar("ReturnT")
 _T = typing.TypeVar("_T", bound="DBConn")
-CallbackT = typing.Callable[typing.Concatenate[_T, Conn, SpecT], typing.Coroutine[typing.Any, typing.Any, ReturnT]]
-TransformedCallbackT = typing.Callable[typing.Concatenate[_T, SpecT], typing.Coroutine[typing.Any, typing.Any, ReturnT]]
 
 
-def with_conn(f: CallbackT[_T, SpecT, ReturnT]) -> TransformedCallbackT[_T, SpecT, ReturnT]:
+def with_conn(
+    f: typing.Callable[typing.Concatenate[_T, Conn, SpecT], typing.Coroutine[typing.Any, typing.Any, ReturnT]]
+) -> typing.Callable[typing.Concatenate[_T, SpecT], typing.Coroutine[typing.Any, typing.Any, ReturnT]]:
     @functools.wraps(f)
     async def inner(self: _T, *args: SpecT.args, **kwargs: SpecT.kwargs) -> ReturnT:
         async with self.pool.acquire() as conn:
