@@ -44,8 +44,10 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
 async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
         flare.Row(StatusSelect.from_game(game)),
-        flare.Row(
+        flare.Row(    
             ToggleSeekingPlayers.from_game(game),
+        ),
+        flare.Row(
             EditButton.from_game(game),
             DeleteButton.from_game(game),
         ),
@@ -80,7 +82,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
         await ctx.edit_response(embeds=await game_display(game), components=await game_main_menu(game))
 
 
-class ToggleSeekingPlayers(flare.Button):
+class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     game: Game
 
     @classmethod
