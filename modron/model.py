@@ -18,9 +18,9 @@ class Model:
 
     async def start(self, app: GatewayBot) -> None:
         self.db_pool = await connect(self.config.db_url)
-        self.games = await GameDB(self.db_pool).prepare()
-        self.players = await PlayerDB(self.db_pool).prepare()
-        self.characters = await CharacterDB(self.db_pool).prepare()
+        self.games = GameDB(self.db_pool)
+        self.players = PlayerDB(self.db_pool)
+        self.characters = CharacterDB(self.db_pool)
 
         application = await app.rest.fetch_application()
         commands = await app.rest.fetch_application_commands(application.id)

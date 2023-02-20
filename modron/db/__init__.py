@@ -1,5 +1,5 @@
 from modron.db.characters import CharacterDB as CharacterDB
-from modron.db.conn import Connection as Connection
+from modron.db.conn import Conn as Conn
 from modron.db.conn import Pool as Pool
 from modron.db.conn import Record as Record
 from modron.db.conn import connect as connect
