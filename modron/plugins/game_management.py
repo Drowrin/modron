@@ -58,7 +58,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
     game: Game
 
     @classmethod
-    def from_game(cls, game: Game) -> StatusSelect:
+    def from_game(cls, game: Game) -> typing.Self:
         return cls(game).set_options(
             *[
                 hikari.SelectMenuOption(
@@ -86,7 +86,7 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     game: Game
 
     @classmethod
-    def from_game(cls, game: Game) -> ToggleSeekingPlayers:
+    def from_game(cls, game: Game) -> typing.Self:
         return cls(game).set_label("Stop Seeking Players" if game.seeking_players else "Start Seeking Players")
 
     async def callback(self, ctx: flare.MessageContext):
@@ -105,7 +105,7 @@ class EditButton(flare.Button, label="Edit Details"):
     game: Game
 
     @classmethod
-    def from_game(cls, game: Game) -> EditButton:
+    def from_game(cls, game: Game) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -119,7 +119,7 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
     game: Game
 
     @classmethod
-    def from_game(cls, game: Game) -> DeleteButton:
+    def from_game(cls, game: Game) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -175,7 +175,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
         name: str | None = None,
         description: str | None = None,
         image: str | None = None,
-    ) -> GameCreateModal:
+    ) -> typing.Self:
         instance = cls()
         instance.name.set_value(name)
         instance.description.set_value(description)
@@ -221,7 +221,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     image: flare.TextInput = game_image_text_input
 
     @classmethod
-    def from_game(cls, game: Game) -> GameEditModal:
+    def from_game(cls, game: Game) -> typing.Self:
         instance = cls(game)
         instance.name.set_value(game.name)
         instance.description.set_value(game.description)
@@ -269,7 +269,7 @@ class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
     )
 
     @classmethod
-    def from_game(cls, game: Game) -> GameDeleteModal:
+    def from_game(cls, game: Game) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.ModalContext) -> None:
