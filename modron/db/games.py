@@ -18,7 +18,7 @@ class GameDB(DBConn):
     ) -> Game:
         row = await self.conn.fetchrow(
             "INSERT INTO Games (name, description, system, guild_id, owner_id, image)"
-            "VALUES ($1, $2, $3, $4, $5, $6, $7)"
+            "VALUES ($1, $2, $3, $4, $5, $6)"
             "RETURNING *;",
             name,
             description,
