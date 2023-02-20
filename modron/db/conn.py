@@ -16,6 +16,11 @@ else:
     Pool = asyncpg.Pool
 
 
+class DBConn:
+    def __init__(self, pool: Pool) -> None:
+        self.pool = pool
+
+
 async def connect(url: str) -> Pool:
     pool = await asyncpg.create_pool(url, record_class=Record)
     if pool is None:
@@ -42,8 +47,3 @@ def with_conn(f: CallbackT[_T, SpecT, ReturnT]) -> TransformedCallbackT[_T, Spec
             return await f(self, conn, *args, **kwargs)
 
     return inner
-
-
-class DBConn:
-    def __init__(self, pool: Pool) -> None:
-        self.pool = pool
