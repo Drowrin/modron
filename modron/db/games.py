@@ -66,8 +66,6 @@ class GameDB(DBConn):
         if record is None:
             raise GameNotFoundError(game_id=game_id)
 
-        print({**record})
-
         return Game(**dict(record))
 
     @with_prepared(
