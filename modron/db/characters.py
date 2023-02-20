@@ -1,14 +1,17 @@
-from modron.db.conn import DBConn
+from modron.db.conn import DBConn, Prep, with_prepared
+from modron.db.models import Character
 
 
 class CharacterDB(DBConn):
-    async def count(self, game_id: int) -> int:
-        val = await self.conn.fetchval(
-            """
-            SELECT COUNT(character_id)
-            FROM Characters
-            WHERE game_id = $1
-            """,
+    @with_prepared(
+        """
+        SELECT COUNT(character_id)
+        FROM Characters
+        WHERE game_id = $1;
+        """
+    )
+    async def count(self, prep: Prep, game_id: int) -> int:
+        val = await prep.fetchval(
             game_id,
         )
 
@@ -16,9 +19,17 @@ class CharacterDB(DBConn):
 
         return val
 
+    @with_prepared(
+        """
+        INSERT INTO Characters
+        (game_id, author_id, name, pronouns, image, brief, description)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING character_id;
+        """
+    )
     async def insert(
         self,
-        *,
+        prep: Prep,
         game_id: int,
         author_id: int,
         name: str,
@@ -26,11 +37,8 @@ class CharacterDB(DBConn):
         description: str,
         pronouns: str | None = None,
         image: str | None = None,
-    ) -> int:
-        character_id = await self.conn.fetchval(
-            "INSERT INTO Characters (game_id, author_id, name, pronouns, image, brief, description)"
-            "VALUES ($1, $2, $3, $4, $5, $6, $7)"
-            "RETURNING character_id;",
+    ) -> Character:
+        row = await prep.fetchrow(
             game_id,
             author_id,
             name,
@@ -40,6 +48,6 @@ class CharacterDB(DBConn):
             description,
         )
 
-        assert isinstance(character_id, int)
+        assert row is not None
 
-        return character_id
+        return Character(**dict(row))

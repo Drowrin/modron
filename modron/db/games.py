@@ -1,14 +1,17 @@
-import typing
-
-from modron.db.conn import DBConn
+from modron.db.conn import DBConn, Prep, with_prepared
 from modron.db.models import Game
 from modron.exceptions import GameNotFoundError
 
 
 class GameDB(DBConn):
+    @with_prepared(
+        "INSERT INTO Games (name, description, system, guild_id, owner_id, image)"
+        "VALUES ($1, $2, $3, $4, $5, $6)"
+        "RETURNING *;"
+    )
     async def insert(
         self,
-        *,
+        prep: Prep,
         name: str,
         description: str,
         system: str,
@@ -16,10 +19,7 @@ class GameDB(DBConn):
         owner_id: int,
         image: str | None = None,
     ) -> Game:
-        row = await self.conn.fetchrow(
-            "INSERT INTO Games (name, description, system, guild_id, owner_id, image)"
-            "VALUES ($1, $2, $3, $4, $5, $6)"
-            "RETURNING *;",
+        row = await prep.fetchrow(
             name,
             description,
             system,
@@ -32,13 +32,15 @@ class GameDB(DBConn):
 
         return Game(**dict(row))
 
-    async def get(self, game_id: int, guild_id: int) -> Game:
-        record = await self.conn.fetchrow(
-            """
-            SELECT *
-            FROM Games
-            WHERE game_id = $1 AND guild_id = $2;
-            """,
+    @with_prepared(
+        """
+        SELECT *
+        FROM Games
+        WHERE game_id = $1 AND guild_id = $2;
+        """
+    )
+    async def get(self, prep: Prep, game_id: int, guild_id: int) -> Game:
+        record = await prep.fetchrow(
             game_id,
             guild_id,
         )
@@ -48,13 +50,15 @@ class GameDB(DBConn):
 
         return Game(**dict(record))
 
-    async def get_owned(self, game_id: int, owner_id: int) -> Game:
-        record = await self.conn.fetchrow(
-            """
-            SELECT *
-            FROM Games
-            WHERE game_id = $1 AND owner_id = $2;
-            """,
+    @with_prepared(
+        """
+        SELECT *
+        FROM Games
+        WHERE game_id = $1 AND owner_id = $2;
+        """
+    )
+    async def get_owned(self, prep: Prep, game_id: int, owner_id: int) -> Game:
+        record = await prep.fetchrow(
             game_id,
             owner_id,
         )
@@ -62,60 +66,92 @@ class GameDB(DBConn):
         if record is None:
             raise GameNotFoundError(game_id=game_id)
 
+        print({**record})
+
         return Game(**dict(record))
 
-    async def update(self, game_id: int, guild_id: int, **kwargs: typing.Any) -> Game:
-        count = len(kwargs)
-        if count == 0:
-            raise TypeError("0 values passed to update_game")
-
-        # these only come from code, so I feel okay about constructing a query string from them
-        columns = ", ".join(kwargs.keys())
-        # these are only parameter references and will be processed by asyncpg rather than direct interpolation
-        values = ", ".join(f"${n + 3}" for n in range(count))
-
-        if count > 1:
-            columns = f"({columns})"
-            values = f"({values})"
-
-        row = await self.conn.fetchrow(
-            f"UPDATE Games SET {columns} = {values} WHERE game_id = $1 AND guild_id = $2 RETURNING *;",
-            game_id,
-            guild_id,
-            *kwargs.values(),
-        )
+    @with_prepared(
+        """
+        UPDATE Games
+        SET
+            name = COALESCE($3, name),
+            description = COALESCE($4, description),
+            system = COALESCE($5, system),
+            image = COALESCE($6, image),
+            status = COALESCE($7, status),
+            seeking_players = COALESCE($8, seeking_players)
+        WHERE game_id = $1 AND guild_id = $2
+        RETURNING *;
+        """
+    )
+    async def update(
+        self,
+        prep: Prep,
+        game_id: int,
+        guild_id: int,
+        name: str | None = None,
+        description: str | None = None,
+        system: str | None = None,
+        image: str | None = None,
+        status: str | None = None,
+        seeking_players: bool | None = None,
+    ) -> Game:
+        row = await prep.fetchrow(game_id, guild_id, name, description, system, image, status, seeking_players)
 
         assert row is not None
 
         return Game(**dict(row))
 
-    async def delete(self, game_id: int) -> None:
-        await self.conn.execute(
-            "DELETE FROM Games WHERE game_id = $1;",
+    @with_prepared(
+        """
+        DELETE FROM Games
+        WHERE game_id = $1;
+        """
+    )
+    async def delete(self, prep: Prep, game_id: int) -> None:
+        await prep.fetchval(
             game_id,
         )
 
-    async def autocomplete_guild(self, guild_id: int, partial_name: str) -> list[tuple[str, str]]:
-        results = await self.conn.fetch(
-            "SELECT game_id, name FROM Games WHERE guild_id = $1 AND name LIKE $2 LIMIT 25;",
+    @with_prepared(
+        """
+        SELECT game_id, name FROM Games
+        WHERE guild_id = $1 AND name LIKE $2
+        LIMIT 25;
+        """
+    )
+    async def autocomplete_guild(self, prep: Prep, guild_id: int, partial_name: str) -> list[tuple[str, str]]:
+        results = await prep.fetch(
             guild_id,
             f"{partial_name}%",
         )
 
         return [(r["name"], r["game_id"]) for r in results]
 
-    async def autocomplete_owned(self, owner_id: int, partial_name: str) -> list[tuple[str, str]]:
-        results = await self.conn.fetch(
-            "SELECT game_id, name FROM Games WHERE owner_id = $1 AND name LIKE $2 LIMIT 25;",
+    @with_prepared(
+        """
+        SELECT game_id, name FROM Games
+        WHERE owner_id = $1 AND name LIKE $2
+        LIMIT 25;
+        """
+    )
+    async def autocomplete_owned(self, prep: Prep, owner_id: int, partial_name: str) -> list[tuple[str, str]]:
+        results = await prep.fetch(
             owner_id,
             f"{partial_name}%",
         )
 
         return [(r["name"], r["game_id"]) for r in results]
 
-    async def autocomplete_systems(self, guild_id: int, partial_name: str) -> list[str]:
-        results = await self.conn.fetch(
-            "SELECT DISTINCT system FROM Games WHERE guild_id = $1 AND system LIKE $2 LIMIT 25;",
+    @with_prepared(
+        """
+        SELECT DISTINCT system FROM Games
+        WHERE guild_id = $1 AND system LIKE $2
+        LIMIT 25;
+        """
+    )
+    async def autocomplete_systems(self, prep: Prep, guild_id: int, partial_name: str) -> list[str]:
+        results = await prep.fetch(
             guild_id,
             f"{partial_name}%",
         )

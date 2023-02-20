@@ -1,4 +1,7 @@
 from modron.db.characters import CharacterDB as CharacterDB
+from modron.db.conn import Connection as Connection
+from modron.db.conn import Pool as Pool
+from modron.db.conn import Record as Record
 from modron.db.conn import connect as connect
 from modron.db.games import GameDB as GameDB
 from modron.db.models import Game as Game

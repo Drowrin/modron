@@ -1,16 +1,15 @@
-import asyncpg
 from crescent import Plugin
 from hikari import GatewayBot, SlashCommand, Snowflake
 
 from modron.config import Config
-from modron.db import CharacterDB, GameDB, PlayerDB, connect
+from modron.db import CharacterDB, GameDB, PlayerDB, Pool, connect
 
 
 class Model:
     def __init__(self, config: Config) -> None:
         self.config = config
 
-        self.db: asyncpg.Connection[asyncpg.Record]
+        self.db_pool: Pool
         self.games: GameDB
         self.players: PlayerDB
         self.characters: CharacterDB
@@ -18,10 +17,10 @@ class Model:
         self.command_ids: dict[str, Snowflake] = {}
 
     async def start(self, app: GatewayBot) -> None:
-        self.db = await connect(self.config.db_url)
-        self.games = GameDB(self.db)
-        self.players = PlayerDB(self.db)
-        self.characters = CharacterDB(self.db)
+        self.db_pool = await connect(self.config.db_url)
+        self.games = await GameDB(self.db_pool).prepare()
+        self.players = await PlayerDB(self.db_pool).prepare()
+        self.characters = await CharacterDB(self.db_pool).prepare()
 
         application = await app.rest.fetch_application()
         commands = await app.rest.fetch_application_commands(application.id)
@@ -31,7 +30,7 @@ class Model:
         return f"</{name}:{self.command_ids.get(name.split()[0], None)}>"
 
     async def close(self) -> None:
-        await self.db.close()
+        await self.db_pool.close()
 
 
 ModronPlugin = Plugin[GatewayBot, Model]
