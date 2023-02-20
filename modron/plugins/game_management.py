@@ -9,7 +9,7 @@ import hikari
 import hikari.api
 
 from modron.db import Game, GameStatus
-from modron.exceptions import ConfirmationError, GamePermissionError
+from modron.exceptions import ConfirmationError, EditPermissionError
 from modron.model import ModronPlugin
 
 plugin = ModronPlugin()
@@ -27,13 +27,14 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     embed = (
         hikari.Embed(
             title=game.name,
-            description=game.description,
             timestamp=game.created_at,
             color=game.status.color,
         )
-        .set_footer(game.status_str)
+        .set_footer("Created")
         .set_thumbnail(game.image)
         .add_field("System", game.system, inline=True)
+        .add_field("Status", game.status_str, inline=True)
+        .add_field("Description", game.description)
         .add_field("Characters", str(char_count), inline=True)
         .add_field("Players", str(player_count), inline=True)
     )
@@ -44,7 +45,7 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
 async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
         flare.Row(StatusSelect.from_game(game)),
-        flare.Row(    
+        flare.Row(
             ToggleSeekingPlayers.from_game(game),
         ),
         flare.Row(
@@ -74,7 +75,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
 
     async def callback(self, ctx: flare.MessageContext) -> None:
         if ctx.user.id != self.game.owner_id:
-            raise GamePermissionError(self.game.game_id)
+            raise EditPermissionError("Game")
 
         assert ctx.guild_id is not None
         game = await plugin.model.games.update(self.game.game_id, ctx.guild_id, status=ctx.values[0])
@@ -91,7 +92,7 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
 
     async def callback(self, ctx: flare.MessageContext):
         if ctx.user.id != self.game.owner_id:
-            raise GamePermissionError(self.game.game_id)
+            raise EditPermissionError("Game")
 
         assert ctx.guild_id is not None
         game = await plugin.model.games.update(
@@ -110,7 +111,7 @@ class EditButton(flare.Button, label="Edit Details"):
 
     async def callback(self, ctx: flare.MessageContext) -> None:
         if ctx.user.id != self.game.owner_id:
-            raise GamePermissionError(self.game.game_id)
+            raise EditPermissionError("Game")
 
         await GameEditModal.from_game(self.game).send(ctx.interaction)
 
@@ -124,7 +125,7 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
 
     async def callback(self, ctx: flare.MessageContext) -> None:
         if ctx.user.id != self.game.owner_id:
-            raise GamePermissionError(self.game.game_id)
+            raise EditPermissionError("Game")
 
         await GameDeleteModal.from_game(self.game).send(ctx.interaction)
 
@@ -133,7 +134,7 @@ game_name_text_input = flare.TextInput(
     label="Title",
     style=hikari.TextInputStyle.SHORT,
     min_length=1,
-    max_length=100,
+    max_length=50,
     required=True,
 )
 
@@ -141,7 +142,7 @@ game_description_text_input = flare.TextInput(
     label="Description",
     style=hikari.TextInputStyle.PARAGRAPH,
     min_length=1,
-    max_length=4000,
+    max_length=1024,
     required=True,
 )
 
@@ -149,7 +150,7 @@ game_system_text_input = flare.TextInput(
     label="System",
     style=hikari.TextInputStyle.SHORT,
     min_length=1,
-    max_length=35,
+    max_length=30,
     required=True,
 )
 

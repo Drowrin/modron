@@ -4,7 +4,7 @@ import hikari
 
 
 class ModronError(Exception):
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str = "an unexpected error occurred") -> None:
         super().__init__()
         self.message = message
 
@@ -20,11 +20,11 @@ class ConfirmationError(ModronError):
         super().__init__("Confirmation input did not match!")
 
 
-class GameNotFoundError(ModronError):
-    def __init__(self, game_id: int) -> None:
-        super().__init__(f"Game with id {game_id} not found!")
+class NotFoundError(ModronError):
+    def __init__(self, model_name: str) -> None:
+        super().__init__(f"{model_name} not found!")
 
 
-class GamePermissionError(ModronError):
-    def __init__(self, game_id: int) -> None:
-        super().__init__("You do not have permission to edit this game!")
+class EditPermissionError(ModronError):
+    def __init__(self, model_name: str) -> None:
+        super().__init__(f"You do not have permission to edit this {model_name}!")

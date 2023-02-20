@@ -6,6 +6,8 @@ import typing
 import asyncpg
 import asyncpg.pool
 
+from modron.exceptions import NotFoundError
+
 Record = asyncpg.Record
 
 if typing.TYPE_CHECKING:
@@ -47,3 +49,24 @@ def with_conn(
             return await f(self, conn, *args, **kwargs)
 
     return inner
+
+
+def convert(
+    t: type[ReturnT],
+) -> typing.Callable[
+    [typing.Callable[SpecT, typing.Coroutine[typing.Any, typing.Any, Record | None]]],
+    typing.Callable[SpecT, typing.Coroutine[typing.Any, typing.Any, ReturnT]],
+]:
+    def decorator(
+        f: typing.Callable[SpecT, typing.Coroutine[typing.Any, typing.Any, Record | None]]
+    ) -> typing.Callable[SpecT, typing.Coroutine[typing.Any, typing.Any, ReturnT]]:
+        async def inner(*args: SpecT.args, **kwargs: SpecT.kwargs) -> ReturnT:
+            record = await f(*args, **kwargs)
+            if record is None:
+                raise NotFoundError(t.__name__)
+            val = typing.cast(typing.Mapping[str, typing.Any], record)
+            return t(**val)
+
+        return inner
+
+    return decorator

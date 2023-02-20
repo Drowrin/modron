@@ -1,10 +1,10 @@
-from modron.db.conn import Conn, DBConn, with_conn
+from modron.db.conn import Conn, DBConn, Record, convert, with_conn
 from modron.db.models import Game
-from modron.exceptions import GameNotFoundError
 
 
 class GameDB(DBConn):
     @with_conn
+    @convert(Game)
     async def insert(
         self,
         conn: Conn,
@@ -14,8 +14,8 @@ class GameDB(DBConn):
         guild_id: int,
         owner_id: int,
         image: str | None = None,
-    ) -> Game:
-        row = await conn.fetchrow(
+    ) -> Record | None:
+        return await conn.fetchrow(
             """
             INSERT INTO Games (name, description, system, guild_id, owner_id, image)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -29,13 +29,10 @@ class GameDB(DBConn):
             image,
         )
 
-        assert row is not None
-
-        return Game(**dict(row))
-
     @with_conn
-    async def get(self, conn: Conn, game_id: int, guild_id: int) -> Game:
-        record = await conn.fetchrow(
+    @convert(Game)
+    async def get(self, conn: Conn, game_id: int, guild_id: int) -> Record | None:
+        return await conn.fetchrow(
             """
             SELECT *
             FROM Games
@@ -45,14 +42,10 @@ class GameDB(DBConn):
             guild_id,
         )
 
-        if record is None:
-            raise GameNotFoundError(game_id)
-
-        return Game(**dict(record))
-
     @with_conn
-    async def get_owned(self, conn: Conn, game_id: int, owner_id: int) -> Game:
-        record = await conn.fetchrow(
+    @convert(Game)
+    async def get_owned(self, conn: Conn, game_id: int, owner_id: int) -> Record | None:
+        return await conn.fetchrow(
             """
             SELECT *
             FROM Games
@@ -62,12 +55,8 @@ class GameDB(DBConn):
             owner_id,
         )
 
-        if record is None:
-            raise GameNotFoundError(game_id=game_id)
-
-        return Game(**dict(record))
-
     @with_conn
+    @convert(Game)
     async def update(
         self,
         conn: Conn,
@@ -79,8 +68,8 @@ class GameDB(DBConn):
         image: str | None = None,
         status: str | None = None,
         seeking_players: bool | None = None,
-    ) -> Game:
-        row = await conn.fetchrow(
+    ) -> Record | None:
+        return await conn.fetchrow(
             """
             UPDATE Games
             SET
@@ -103,13 +92,9 @@ class GameDB(DBConn):
             seeking_players,
         )
 
-        assert row is not None
-
-        return Game(**dict(row))
-
     @with_conn
     async def delete(self, conn: Conn, game_id: int) -> None:
-        await conn.fetchval(
+        await conn.execute(
             """
             DELETE FROM Games
             WHERE game_id = $1;

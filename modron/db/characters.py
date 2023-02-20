@@ -1,4 +1,4 @@
-from modron.db.conn import Conn, DBConn, with_conn
+from modron.db.conn import Conn, DBConn, Record, convert, with_conn
 from modron.db.models import Character
 
 
@@ -19,6 +19,7 @@ class CharacterDB(DBConn):
         return val
 
     @with_conn
+    @convert(Character)
     async def insert(
         self,
         conn: Conn,
@@ -29,8 +30,8 @@ class CharacterDB(DBConn):
         description: str,
         pronouns: str | None = None,
         image: str | None = None,
-    ) -> Character:
-        row = await conn.fetchrow(
+    ) -> Record | None:
+        return await conn.fetchrow(
             """
             INSERT INTO Characters
             (game_id, author_id, name, pronouns, image, brief, description)
@@ -45,7 +46,3 @@ class CharacterDB(DBConn):
             brief,
             description,
         )
-
-        assert row is not None
-
-        return Character(**dict(row))
