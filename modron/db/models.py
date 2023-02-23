@@ -7,6 +7,25 @@ from enum import Enum
 import attrs
 
 
+@attrs.define(kw_only=True)
+class SystemLite:
+    system_id: int
+
+    guild_id: int
+
+    name: str
+
+    author_label: str
+    player_label: str
+
+    emoji_id: int | None = None
+
+
+@attrs.define(kw_only=True)
+class System(SystemLite):
+    games: list[GameLite] = attrs.field(converter=lambda rs: [GameLite(**r) for r in rs])
+
+
 class GameStatus(typing.NamedTuple("GameStatus", label=str, description=str, color=str, emoji=str), Enum):
     UNSTARTED = "Unstarted", "This game has not started having sessions yet", "DDDD11", "⏯️"
     RUNNING = "Running", "This game is having regular sessions", "11FF11", "▶️"
@@ -22,18 +41,25 @@ class GameStatus(typing.NamedTuple("GameStatus", label=str, description=str, col
 class GameLite:
     game_id: int
 
+    system_id: int
+
     guild_id: int
     owner_id: int
 
     name: str
     description: str
-    system: str
     image: str | None = None
 
     status: GameStatus = attrs.field(converter=lambda s: GameStatus[s.upper()])
     seeking_players: bool
 
     created_at: datetime
+    
+    category_id: int | None = None
+    main_channel_id: int | None = None
+    info_channel_id: int | None = None
+    schedule_channel_id: int | None = None
+    synopsis_channel_id: int | None = None
 
     @property
     def status_str(self) -> str:
@@ -44,12 +70,7 @@ class GameLite:
 
 @attrs.define(kw_only=True)
 class Game(GameLite):
-    category_id: int | None = None
-    main_channel_id: int | None = None
-    info_channel_id: int | None = None
-    schedule_channel_id: int | None = None
-    synopsis_channel_id: int | None = None
-
+    system: SystemLite = attrs.field(converter=lambda r: SystemLite(**r))
     characters: list[Character] = attrs.field(converter=lambda rs: [Character(**r) for r in rs])
     players: list[Player] = attrs.field(converter=lambda rs: [Player(**r) for r in rs])
 
@@ -74,8 +95,6 @@ class Character:
 class Player:
     user_id: int
     game_id: int
-
-    role: str
 
     character_id: int | None = None
 

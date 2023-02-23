@@ -2,7 +2,7 @@ from crescent import Plugin
 from hikari import GatewayBot, SlashCommand, Snowflake
 
 from modron.config import Config
-from modron.db import CharacterDB, GameDB, PlayerDB, Pool, connect
+from modron.db import CharacterDB, GameDB, PlayerDB, SystemDB, Pool, connect
 
 
 class Model:
@@ -10,6 +10,7 @@ class Model:
         self.config = config
 
         self.db_pool: Pool
+        self.systems: SystemDB
         self.games: GameDB
         self.players: PlayerDB
         self.characters: CharacterDB
@@ -18,6 +19,7 @@ class Model:
 
     async def start(self, app: GatewayBot) -> None:
         self.db_pool = await connect(self.config.db_url)
+        self.systems = SystemDB(self.db_pool)
         self.games = GameDB(self.db_pool)
         self.players = PlayerDB(self.db_pool)
         self.characters = CharacterDB(self.db_pool)

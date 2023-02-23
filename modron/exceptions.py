@@ -28,3 +28,8 @@ class NotFoundError(ModronError):
 class EditPermissionError(ModronError):
     def __init__(self, model_name: str) -> None:
         super().__init__(f"You do not have permission to edit this {model_name}!")
+
+
+class AutocompleteSelectError(ModronError):
+    def __init__(self) -> None:
+        super().__init__("Please select an autocomplete suggestion!")

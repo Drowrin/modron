@@ -6,10 +6,9 @@ import typing
 import crescent
 import flare
 import hikari
-import hikari.api
 
 from modron.db import Game, GameLite, GameStatus
-from modron.exceptions import ConfirmationError, EditPermissionError
+from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
 from modron.model import ModronPlugin
 
 plugin = ModronPlugin()
@@ -29,7 +28,7 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
         )
         .set_footer("Created")
         .set_thumbnail(game.image)
-        .add_field("System", game.system, inline=True)
+        .add_field("System", game.system.name, inline=True)
         .add_field("Status", game.status_str, inline=True)
     )
 
@@ -45,7 +44,7 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
 
         character = player.get_character_in(game)
 
-        role = player.role
+        role = game.system.player_label
 
         if character is not None:
             role = f"{role}: {character.name}"
@@ -177,32 +176,16 @@ game_image_text_input = flare.TextInput(
 
 
 class GameCreateModal(flare.Modal, title="New Game"):
+    system_id: int
+    
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
-    system: flare.TextInput = game_system_text_input
     image: flare.TextInput = game_image_text_input
-
-    @classmethod
-    def from_details(
-        cls,
-        system: str,
-        name: str | None = None,
-        description: str | None = None,
-        image: str | None = None,
-    ) -> typing.Self:
-        instance = cls()
-        instance.name.set_value(name)
-        instance.description.set_value(description)
-        instance.system.set_value(system)
-        instance.image.set_value(image)
-
-        return instance
 
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
         assert self.description.value is not None
-        assert self.system.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -211,7 +194,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
         game_lite = await plugin.model.games.insert(
             name=self.name.value,
             description=self.description.value,
-            system=self.system.value,
+            system_id=self.system_id,
             guild_id=ctx.guild_id,
             owner_id=ctx.user.id,
             # replace '' with None
@@ -235,7 +218,6 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
-    system: flare.TextInput = game_system_text_input
     image: flare.TextInput = game_image_text_input
 
     @classmethod
@@ -243,7 +225,6 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         instance = cls(game)
         instance.name.set_value(game.name)
         instance.description.set_value(game.description)
-        instance.system.set_value(game.system)
         instance.image.set_value(game.image)
 
         return instance
@@ -252,7 +233,6 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         # these are marked as required, so they should not be None
         assert self.name.value is not None
         assert self.description.value is not None
-        assert self.system.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -260,7 +240,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
         kwargs = {
             k: v
-            for k in ["name", "description", "system", "image"]
+            for k in ["name", "description", "image"]
             if (v := getattr(self, k).value or None) != getattr(self.game, k)
         }
 
@@ -306,9 +286,9 @@ async def autocomplete_systems(
 ) -> list[hikari.CommandChoice]:
     assert ctx.guild_id is not None
 
-    results = await plugin.model.games.autocomplete_systems(ctx.guild_id, str(option.value))
+    results = await plugin.model.systems.autocomplete(ctx.guild_id, str(option.value))
 
-    return [hikari.CommandChoice(name=r, value=r) for r in results]
+    return [hikari.CommandChoice(name=name, value=str(system_id)) for name, system_id in results]
 
 
 @plugin.include
@@ -321,32 +301,18 @@ class GameCreate:
         autocomplete=autocomplete_systems,
         max_length=36,
     )
-    title = crescent.option(
-        str,
-        "The display title of the game (you can change this later)",
-        max_length=100,
-        default=None,
-    )
-    description = crescent.option(
-        str,
-        "The description of the game (you can change this later)",
-        max_length=4000,
-        default=None,
-    )
-    image = crescent.option(
-        str,
-        "URL pointing to an image that will be used as a banner for the game (you can change this later)",
-        max_length=256,
-        default=None,
-    )
 
     async def callback(self, ctx: crescent.Context) -> None:
-        await GameCreateModal.from_details(
-            system=self.system,
-            name=self.title,
-            description=self.description,
-            image=self.image,
-        ).send(ctx.interaction)
+        assert ctx.guild_id is not None
+        
+        try:
+            system_id = int(self.system)
+        except ValueError as err:
+            raise AutocompleteSelectError() from err
+        
+        system = await plugin.model.systems.get_lite(system_id, ctx.guild_id)
+        
+        await GameCreateModal(system_id=system.system_id).send(ctx.interaction)
 
 
 async def autocomplete_guild_games(
@@ -378,12 +344,8 @@ class GameSettings:
 
         try:
             game_id = int(self.name)
-        except ValueError:
-            await ctx.respond(
-                "Please select an autocomplete suggestion",
-                flags=hikari.MessageFlag.EPHEMERAL,
-            )
-            return
+        except ValueError as err:
+            raise AutocompleteSelectError() from err
 
         await ctx.defer(ephemeral=True)
 
@@ -407,12 +369,8 @@ class GameInfo:
 
         try:
             game_id = int(self.name)
-        except ValueError:
-            await ctx.respond(
-                "Please select an autocomplete suggestion",
-                flags=hikari.MessageFlag.EPHEMERAL,
-            )
-            return
+        except ValueError as err:
+            raise AutocompleteSelectError() from err
 
         await ctx.defer()
 

@@ -4,11 +4,28 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+CREATE TABLE IF NOT EXISTS Systems (
+    system_id SERIAL,
+    guild_id BIGINT NOT NULL,
+
+    name VARCHAR(30) NOT NULL,
+
+    author_label VARCHAR(30) NOT NULL,
+    player_label VARCHAR(30) NOT NULL,
+
+    -- name can contain unicode emoji
+    -- this is for an optional discord emoji
+    emoji_id BIGINT,
+
+    CONSTRAINT systems_pk PRIMARY KEY (system_id),
+    CONSTRAINT systems_name_guild_unique UNIQUE (name, guild_id)
+);
+
 CREATE TABLE IF NOT EXISTS Games (
     game_id SERIAL,
+    system_id INT NOT NULL,
     name VARCHAR(50) NOT NULL,
     description VARCHAR(1024) NOT NULL,
-    system VARCHAR(30) NOT NULL,
 
     guild_id BIGINT NOT NULL,
     owner_id BIGINT NOT NULL,
@@ -27,7 +44,8 @@ CREATE TABLE IF NOT EXISTS Games (
     synopsis_channel_id BIGINT,
 
     CONSTRAINT games_pk PRIMARY KEY (game_id),
-    CONSTRAINT games_name_guild_unique UNIQUE (name, guild_id)
+    CONSTRAINT games_name_guild_unique UNIQUE (name, guild_id),
+    CONSTRAINT games_system_fk FOREIGN KEY (system_id) REFERENCES Systems (system_id)
 );
 
 CREATE TABLE IF NOT EXISTS Characters (
@@ -52,8 +70,6 @@ CREATE TABLE IF NOT EXISTS Players (
     game_id INT,
 
     character_id INT,
-
-    role VARCHAR(40) NOT NULL,
 
     CONSTRAINT players_pk PRIMARY KEY (user_id, game_id),
     CONSTRAINT players_game_fk FOREIGN KEY (game_id) REFERENCES Games (game_id),

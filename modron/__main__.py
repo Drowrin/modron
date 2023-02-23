@@ -8,7 +8,7 @@ import flare
 import hikari
 
 from modron.config import Config
-from modron.db import Game, GameLite
+from modron.db import Game, GameLite, System, SystemLite
 from modron.exceptions import ModronError
 from modron.model import Model
 
@@ -90,14 +90,35 @@ class GameConverter(flare.Converter[Game]):
 
 class GameLiteConverter(flare.Converter[GameLite]):
     async def to_str(self, obj: GameLite) -> str:
-        return str(obj.game_id)
+        return f"{obj.guild_id}:{obj.game_id}"
 
     async def from_str(self, obj: str) -> GameLite:
-        return await model.games.get_lite(int(obj))
+        guild_id, game_id = obj.split(":")
+        return await model.games.get_lite(int(game_id), int(guild_id))
+
+
+class SystemConverter(flare.Converter[System]):
+    async def to_str(self, obj: System) -> str:
+        return f"{obj.guild_id}:{obj.system_id}"
+
+    async def from_str(self, obj: str) -> System:
+        guild_id, system_id = obj.split(":")
+        return await model.systems.get(int(system_id), int(guild_id))
+    
+    
+class SystemLiteConverter(flare.Converter[SystemLite]):
+    async def to_str(self, obj: SystemLite) -> str:
+        return f"{obj.guild_id}:{obj.system_id}"
+
+    async def from_str(self, obj: str) -> SystemLite:
+        guild_id, system_id = obj.split(":")
+        return await model.systems.get_lite(int(system_id), int(guild_id))
 
 
 flare.add_converter(Game, GameConverter)
 flare.add_converter(GameLite, GameLiteConverter)
+flare.add_converter(System, SystemConverter)
+flare.add_converter(SystemLite, SystemLiteConverter)
 
 
 # run forever

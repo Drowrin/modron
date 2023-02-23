@@ -20,15 +20,14 @@ class PlayerDB(DBConn):
 
     @with_conn
     @convert(Player)
-    async def insert(self, conn: Conn, user_id: int, game_id: int, role: str) -> Record | None:
+    async def insert(self, conn: Conn, user_id: int, game_id: int) -> Record | None:
         return await conn.fetchrow(
             """
             INSERT INTO Players
-            (user_id, game_id, role)
-            VALUES ($1, $2, $3)
+            (user_id, game_id)
+            VALUES ($1, $2)
             RETURNING *;
             """,
             user_id,
             game_id,
-            role,
         )

@@ -36,7 +36,7 @@ class CharacterDB(DBConn):
             INSERT INTO Characters
             (game_id, author_id, name, pronouns, image, brief, description)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING character_id;
+            RETURNING *;
             """,
             game_id,
             author_id,
