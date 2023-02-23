@@ -39,9 +39,6 @@ class GameLite:
     def status_str(self) -> str:
         status = f"{self.status.emoji} {self.status.label}"
 
-        if self.seeking_players:
-            status += " - Seeking Players"
-
         return status
 
 

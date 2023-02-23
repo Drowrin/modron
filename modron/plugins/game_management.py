@@ -30,11 +30,11 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
         .set_footer("Created")
         .set_thumbnail(game.image)
         .add_field("System", game.system, inline=True)
-        .add_field("Status", game.status.label, inline=True)
+        .add_field("Status", game.status_str, inline=True)
     )
 
     if game.seeking_players:
-        embed.add_field("Seeking Players", "✔️", inline=True)
+        embed.add_field("Seeking Players", "✅ Yes", inline=True)
 
     embed.add_field("Description", game.description)
 
