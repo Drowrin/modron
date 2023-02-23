@@ -12,14 +12,6 @@ def lint(session: nox.Session):
 
 
 @nox.session
-def typecheck(session: nox.Session):
-    session.install("-r", "requirements/prod.txt")
-    session.install("-r", "requirements/types.txt")
-    
-    session.run("pyright", "modron")
-
-
-@nox.session
 def fixes(session: nox.Session):
     session.install("-r", "requirements/tools.txt")
 
@@ -27,3 +19,11 @@ def fixes(session: nox.Session):
     session.run("isort", "modron")
     session.run("ruff", "--fix", "modron")
     session.run("codespell", "modron", "-i", "2", "-w")
+
+
+@nox.session
+def typecheck(session: nox.Session):
+    session.install("-r", "requirements/prod.txt")
+    session.install("-r", "requirements/types.txt")
+    
+    session.run("pyright", "modron")
