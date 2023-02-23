@@ -1,5 +1,5 @@
-from modron.db.conn import Conn, DBConn, Record, convert, with_conn
-from modron.db.models import Game
+from modron.db.conn import Conn, DBConn, convert, with_conn
+from modron.db.models import Game, GameLite
 
 
 class GameDB(DBConn):
@@ -14,7 +14,7 @@ class GameDB(DBConn):
         guild_id: int,
         owner_id: int,
         image: str | None = None,
-    ) -> Record | None:
+    ):
         return await conn.fetchrow(
             """
             INSERT INTO Games (name, description, system, guild_id, owner_id, image)
@@ -30,33 +30,41 @@ class GameDB(DBConn):
         )
 
     @with_conn
-    @convert(Game)
-    async def get(self, conn: Conn, game_id: int, guild_id: int) -> Record | None:
+    @convert(GameLite)
+    async def get_lite(self, conn: Conn, game_id: int):
         return await conn.fetchrow(
             """
-            SELECT *
+            SELECT
+                game_id, guild_id, owner_id, name, description, system, image, status, seeking_players, created_at
             FROM Games
-            WHERE game_id = $1 AND guild_id = $2;
+            WHERE
+                game_id = $1;
             """,
             game_id,
-            guild_id,
         )
 
     @with_conn
     @convert(Game)
-    async def get_owned(self, conn: Conn, game_id: int, owner_id: int) -> Record | None:
+    async def get(self, conn: Conn, game_id: int, guild_id: int, owner_id: int | None = None):
         return await conn.fetchrow(
             """
-            SELECT *
-            FROM Games
-            WHERE game_id = $1 AND owner_id = $2;
+            SELECT
+                g.*,
+                array_remove(array_agg(c), NULL) AS characters,
+                array_remove(array_agg(p), NULL) AS players
+            FROM Games AS g
+            LEFT JOIN Characters AS c USING (game_id)
+            LEFT JOIN Players AS p USING (game_id)
+            WHERE
+                game_id = $1 AND guild_id = $2 AND ($3::bigint IS NULL OR owner_id = $3::bigint)
+            GROUP BY game_id;
             """,
             game_id,
+            guild_id,
             owner_id,
         )
 
     @with_conn
-    @convert(Game)
     async def update(
         self,
         conn: Conn,
@@ -68,8 +76,8 @@ class GameDB(DBConn):
         image: str | None = None,
         status: str | None = None,
         seeking_players: bool | None = None,
-    ) -> Record | None:
-        return await conn.fetchrow(
+    ):
+        await conn.execute(
             """
             UPDATE Games
             SET
@@ -79,8 +87,8 @@ class GameDB(DBConn):
                 image = COALESCE($6, image),
                 status = COALESCE($7, status),
                 seeking_players = COALESCE($8, seeking_players)
-            WHERE game_id = $1 AND guild_id = $2
-            RETURNING *;
+            WHERE
+                game_id = $1 AND guild_id = $2;
             """,
             game_id,
             guild_id,
@@ -96,8 +104,10 @@ class GameDB(DBConn):
     async def delete(self, conn: Conn, game_id: int) -> None:
         await conn.execute(
             """
-            DELETE FROM Games
-            WHERE game_id = $1;
+            DELETE
+            FROM Games
+            WHERE
+                game_id = $1;
             """,
             game_id,
         )
@@ -106,8 +116,11 @@ class GameDB(DBConn):
     async def autocomplete_guild(self, conn: Conn, guild_id: int, partial_name: str) -> list[tuple[str, str]]:
         results = await conn.fetch(
             """
-            SELECT game_id, name FROM Games
-            WHERE guild_id = $1 AND name LIKE $2
+            SELECT
+                game_id, name
+            FROM Games
+            WHERE
+                guild_id = $1 AND name LIKE $2
             LIMIT 25;
             """,
             guild_id,
@@ -120,8 +133,11 @@ class GameDB(DBConn):
     async def autocomplete_owned(self, conn: Conn, owner_id: int, partial_name: str) -> list[tuple[str, str]]:
         results = await conn.fetch(
             """
-            SELECT game_id, name FROM Games
-            WHERE owner_id = $1 AND name LIKE $2
+            SELECT
+                game_id, name
+            FROM Games
+            WHERE
+                owner_id = $1 AND name LIKE $2
             LIMIT 25;
             """,
             owner_id,
@@ -134,8 +150,11 @@ class GameDB(DBConn):
     async def autocomplete_systems(self, conn: Conn, guild_id: int, partial_name: str) -> list[str]:
         results = await conn.fetch(
             """
-            SELECT DISTINCT system FROM Games
-            WHERE guild_id = $1 AND system LIKE $2
+            SELECT DISTINCT
+                system
+            FROM Games
+            WHERE
+                guild_id = $1 AND system LIKE $2
             LIMIT 25;
             """,
             guild_id,

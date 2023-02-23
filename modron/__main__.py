@@ -8,7 +8,7 @@ import flare
 import hikari
 
 from modron.config import Config
-from modron.db import Game
+from modron.db import Game, GameLite
 from modron.exceptions import ModronError
 from modron.model import Model
 
@@ -88,7 +88,16 @@ class GameConverter(flare.Converter[Game]):
         return await model.games.get(int(game_id), int(guild_id))
 
 
+class GameLiteConverter(flare.Converter[GameLite]):
+    async def to_str(self, obj: GameLite) -> str:
+        return str(obj.game_id)
+
+    async def from_str(self, obj: str) -> GameLite:
+        return await model.games.get_lite(int(obj))
+
+
 flare.add_converter(Game, GameConverter)
+flare.add_converter(GameLite, GameLiteConverter)
 
 
 # run forever

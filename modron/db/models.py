@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing
 from datetime import datetime
 from enum import Enum
@@ -16,28 +18,22 @@ class GameStatus(typing.NamedTuple("GameStatus", label=str, description=str, col
         return self.name.lower()
 
 
-@attrs.define
-class Game:
+@attrs.define(kw_only=True)
+class GameLite:
     game_id: int
-    name: str
-    description: str
-    system: str
 
     guild_id: int
     owner_id: int
+
+    name: str
+    description: str
+    system: str
+    image: str | None = None
 
     status: GameStatus = attrs.field(converter=lambda s: GameStatus[s.upper()])
     seeking_players: bool
 
     created_at: datetime
-
-    image: str | None = None
-
-    category_id: int | None = None
-    main_channel_id: int | None = None
-    info_channel_id: int | None = None
-    schedule_channel_id: int | None = None
-    synopsis_channel_id: int | None = None
 
     @property
     def status_str(self) -> str:
@@ -49,7 +45,19 @@ class Game:
         return status
 
 
-@attrs.define
+@attrs.define(kw_only=True)
+class Game(GameLite):
+    category_id: int | None = None
+    main_channel_id: int | None = None
+    info_channel_id: int | None = None
+    schedule_channel_id: int | None = None
+    synopsis_channel_id: int | None = None
+
+    characters: list[Character] = attrs.field(converter=lambda rs: [Character(**r) for r in rs])
+    players: list[Player] = attrs.field(converter=lambda rs: [Player(**r) for r in rs])
+
+
+@attrs.define(kw_only=True)
 class Character:
     character_id: int
     game_id: int
@@ -65,11 +73,14 @@ class Character:
     image: str | None = None
 
 
-@attrs.define
+@attrs.define(kw_only=True)
 class Player:
     user_id: int
     game_id: int
 
     role: str
 
-    characater_id: int | None = None
+    character_id: int | None = None
+
+    def get_character_in(self, game: Game) -> Character | None:
+        return next((c for c in game.characters if c.character_id == self.character_id), None)

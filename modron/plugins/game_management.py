@@ -8,7 +8,7 @@ import flare
 import hikari
 import hikari.api
 
-from modron.db import Game, GameStatus
+from modron.db import Game, GameLite, GameStatus
 from modron.exceptions import ConfirmationError, EditPermissionError
 from modron.model import ModronPlugin
 
@@ -21,9 +21,6 @@ game = crescent.Group(
 
 
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
-    char_count = await plugin.model.characters.count(game.game_id)
-    player_count = await plugin.model.players.count(game.game_id)
-
     embed = (
         hikari.Embed(
             title=game.name,
@@ -33,11 +30,27 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
         .set_footer("Created")
         .set_thumbnail(game.image)
         .add_field("System", game.system, inline=True)
-        .add_field("Status", game.status_str, inline=True)
-        .add_field("Description", game.description)
-        .add_field("Characters", str(char_count), inline=True)
-        .add_field("Players", str(player_count), inline=True)
+        .add_field("Status", game.status.label, inline=True)
     )
+
+    if game.seeking_players:
+        embed.add_field("Seeking Players", "✔️", inline=True)
+
+    embed.add_field("Description", game.description)
+
+    for player in game.players:
+        user = plugin.app.cache.get_member(game.guild_id, player.user_id) or await plugin.app.rest.fetch_member(
+            game.guild_id, player.user_id
+        )
+
+        character = player.get_character_in(game)
+
+        role = player.role
+
+        if character is not None:
+            role = f"{role}: {character.name}"
+
+        embed.add_field(user.display_name, role, inline=True)
 
     return [embed]
 
@@ -56,10 +69,10 @@ async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuil
 
 
 class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Change Status"):
-    game: Game
+    game: GameLite
 
     @classmethod
-    def from_game(cls, game: Game) -> typing.Self:
+    def from_game(cls, game: GameLite) -> typing.Self:
         return cls(game).set_options(
             *[
                 hikari.SelectMenuOption(
@@ -78,16 +91,17 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
             raise EditPermissionError("Game")
 
         assert ctx.guild_id is not None
-        game = await plugin.model.games.update(self.game.game_id, ctx.guild_id, status=ctx.values[0])
+        await plugin.model.games.update(self.game.game_id, ctx.guild_id, status=ctx.values[0])
+        game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
 
         await ctx.edit_response(embeds=await game_display(game), components=await game_main_menu(game))
 
 
 class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
-    game: Game
+    game: GameLite
 
     @classmethod
-    def from_game(cls, game: Game) -> typing.Self:
+    def from_game(cls, game: GameLite) -> typing.Self:
         return cls(game).set_label("Stop Seeking Players" if game.seeking_players else "Start Seeking Players")
 
     async def callback(self, ctx: flare.MessageContext):
@@ -95,18 +109,17 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
             raise EditPermissionError("Game")
 
         assert ctx.guild_id is not None
-        game = await plugin.model.games.update(
-            self.game.game_id, ctx.guild_id, seeking_players=not self.game.seeking_players
-        )
+        await plugin.model.games.update(self.game.game_id, ctx.guild_id, seeking_players=not self.game.seeking_players)
+        game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
 
         await ctx.edit_response(embeds=await game_display(game), components=await game_main_menu(game))
 
 
 class EditButton(flare.Button, label="Edit Details"):
-    game: Game
+    game: GameLite
 
     @classmethod
-    def from_game(cls, game: Game) -> typing.Self:
+    def from_game(cls, game: GameLite) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -117,10 +130,10 @@ class EditButton(flare.Button, label="Edit Details"):
 
 
 class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER):
-    game: Game
+    game: GameLite
 
     @classmethod
-    def from_game(cls, game: Game) -> typing.Self:
+    def from_game(cls, game: GameLite) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -214,7 +227,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
 
 
 class GameEditModal(flare.Modal, title="Edit Game"):
-    game: Game
+    game: GameLite
 
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
@@ -222,7 +235,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     image: flare.TextInput = game_image_text_input
 
     @classmethod
-    def from_game(cls, game: Game) -> typing.Self:
+    def from_game(cls, game: GameLite) -> typing.Self:
         instance = cls(game)
         instance.name.set_value(game.name)
         instance.description.set_value(game.description)
@@ -250,7 +263,8 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         if len(kwargs) == 0:
             return  # nothing to update
 
-        game = await plugin.model.games.update(game_id=self.game.game_id, guild_id=ctx.guild_id, **kwargs)
+        await plugin.model.games.update(game_id=self.game.game_id, guild_id=ctx.guild_id, **kwargs)
+        game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
 
         await ctx.edit_response(
             embeds=await game_display(game),
@@ -259,7 +273,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
 
 class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
-    game: Game
+    game: GameLite
 
     confirmation: flare.TextInput = flare.TextInput(
         label='Please confirm by typing "CONFIRM" in caps',
@@ -270,7 +284,7 @@ class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
     )
 
     @classmethod
-    def from_game(cls, game: Game) -> typing.Self:
+    def from_game(cls, game: GameLite) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.ModalContext) -> None:
@@ -356,6 +370,8 @@ class GameSettings:
     name = crescent.option(str, "the name of the game", autocomplete=autocomplete_owned_games)
 
     async def callback(self, ctx: crescent.Context) -> None:
+        assert ctx.guild_id is not None
+
         try:
             game_id = int(self.name)
         except ValueError:
@@ -367,7 +383,7 @@ class GameSettings:
 
         await ctx.defer(ephemeral=True)
 
-        game = await plugin.model.games.get_owned(game_id, ctx.user.id)
+        game = await plugin.model.games.get(game_id, ctx.guild_id, ctx.user.id)
 
         await ctx.respond(
             embeds=await game_display(game),

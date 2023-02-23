@@ -6,9 +6,9 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS Games (
     game_id SERIAL,
-    name VARCHAR(100) NOT NULL,
-    description VARCHAR(4000) NOT NULL,
-    system VARCHAR(35) NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    description VARCHAR(1024) NOT NULL,
+    system VARCHAR(30) NOT NULL,
 
     guild_id BIGINT NOT NULL,
     owner_id BIGINT NOT NULL,
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS Characters (
     game_id INT NOT NULL,
     author_id BIGINT NOT NULL,
 
-    name VARCHAR(100) NOT NULL,
-    pronouns VARCHAR(64),
+    name VARCHAR(60) NOT NULL,
+    pronouns VARCHAR(40),
 
     image VARCHAR(256),
 
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS Players (
 
     character_id INT,
 
-    role VARCHAR(100) NOT NULL,
+    role VARCHAR(40) NOT NULL,
 
     CONSTRAINT players_pk PRIMARY KEY (user_id, game_id),
     CONSTRAINT players_game_fk FOREIGN KEY (game_id) REFERENCES Games (game_id),
