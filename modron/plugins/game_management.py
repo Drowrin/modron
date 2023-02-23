@@ -208,7 +208,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
 
         await ctx.defer()
 
-        game = await plugin.model.games.insert(
+        game_lite = await plugin.model.games.insert(
             name=self.name.value,
             description=self.description.value,
             system=self.system.value,
@@ -216,6 +216,10 @@ class GameCreateModal(flare.Modal, title="New Game"):
             owner_id=ctx.user.id,
             # replace '' with None
             image=self.image.value or None,
+        )
+        game = await plugin.model.games.get(
+            game_lite.game_id,
+            ctx.guild_id,
         )
 
         await ctx.respond(

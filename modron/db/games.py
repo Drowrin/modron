@@ -4,7 +4,7 @@ from modron.db.models import Game, GameLite
 
 class GameDB(DBConn):
     @with_conn
-    @convert(Game)
+    @convert(GameLite)
     async def insert(
         self,
         conn: Conn,
