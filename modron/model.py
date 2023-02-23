@@ -2,7 +2,7 @@ from crescent import Plugin
 from hikari import GatewayBot, SlashCommand, Snowflake
 
 from modron.config import Config
-from modron.db import CharacterDB, GameDB, PlayerDB, SystemDB, Pool, connect
+from modron.db import CharacterDB, GameDB, PlayerDB, Pool, SystemDB, connect
 
 
 class Model:

@@ -6,13 +6,7 @@ class SystemDB(DBConn):
     @with_conn
     @convert(SystemLite)
     async def insert(
-        self,
-        conn: Conn,
-        guild_id: int,
-        name: str,
-        author_label: str,
-        player_label: str,
-        emoji_id: int | None = None
+        self, conn: Conn, guild_id: int, name: str, author_label: str, player_label: str, emoji_id: int | None = None
     ):
         return await conn.fetchrow(
             """
@@ -26,7 +20,7 @@ class SystemDB(DBConn):
             player_label,
             emoji_id,
         )
-    
+
     @with_conn
     @convert(SystemLite)
     async def get_lite(self, conn: Conn, system_id: int, guild_id: int):
@@ -40,7 +34,7 @@ class SystemDB(DBConn):
             system_id,
             guild_id,
         )
-    
+
     @with_conn
     @convert(System)
     async def get(self, conn: Conn, system_id: int, guild_id: int):
@@ -60,7 +54,7 @@ class SystemDB(DBConn):
             system_id,
             guild_id,
         )
-    
+
     @with_conn
     async def autocomplete(self, conn: Conn, guild_id: int, partial_name: str) -> list[tuple[str, int]]:
         results = await conn.fetch(
@@ -76,5 +70,5 @@ class SystemDB(DBConn):
             guild_id,
             f"{partial_name}%",
         )
-        
+
         return [(r["name"], r["system_id"]) for r in results]

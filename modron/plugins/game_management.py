@@ -19,6 +19,28 @@ game = crescent.Group(
 )
 
 
+class GameConverter(flare.Converter[Game]):
+    async def to_str(self, obj: Game) -> str:
+        return f"{obj.guild_id}:{obj.game_id}"
+
+    async def from_str(self, obj: str) -> Game:
+        guild_id, game_id = obj.split(":")
+        return await plugin.model.games.get(int(game_id), int(guild_id))
+
+
+class GameLiteConverter(flare.Converter[GameLite]):
+    async def to_str(self, obj: GameLite) -> str:
+        return f"{obj.guild_id}:{obj.game_id}"
+
+    async def from_str(self, obj: str) -> GameLite:
+        guild_id, game_id = obj.split(":")
+        return await plugin.model.games.get_lite(int(game_id), int(guild_id))
+
+
+flare.add_converter(Game, GameConverter)
+flare.add_converter(GameLite, GameLiteConverter)
+
+
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     embed = (
         hikari.Embed(
@@ -177,7 +199,7 @@ game_image_text_input = flare.TextInput(
 
 class GameCreateModal(flare.Modal, title="New Game"):
     system_id: int
-    
+
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
     image: flare.TextInput = game_image_text_input
@@ -304,14 +326,14 @@ class GameCreate:
 
     async def callback(self, ctx: crescent.Context) -> None:
         assert ctx.guild_id is not None
-        
+
         try:
             system_id = int(self.system)
         except ValueError as err:
             raise AutocompleteSelectError() from err
-        
+
         system = await plugin.model.systems.get_lite(system_id, ctx.guild_id)
-        
+
         await GameCreateModal(system_id=system.system_id).send(ctx.interaction)
 
 

@@ -54,7 +54,7 @@ class GameLite:
     seeking_players: bool
 
     created_at: datetime
-    
+
     category_id: int | None = None
     main_channel_id: int | None = None
     info_channel_id: int | None = None
