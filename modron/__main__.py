@@ -68,7 +68,6 @@ async def on_modron_error(event: hikari.ExceptionEvent[hikari.Event]):
         interaction.token,
         hikari.ResponseType.MESSAGE_CREATE,
         **event.exception.to_response_args(),
-        flags=hikari.MessageFlag.EPHEMERAL,
     )
 
 
