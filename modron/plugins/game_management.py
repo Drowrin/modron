@@ -85,6 +85,7 @@ async def game_main_menu(game: GameLite) -> typing.Sequence[hikari.api.Component
         flare.Row(
             EditStatusButton.make(game),
             ToggleSeekingPlayers.make(game),
+            AddUsersButton.make(game),
         ),
         flare.Row(
             EditButton.make(game),
@@ -98,6 +99,41 @@ async def game_status_menu(game: GameLite) -> typing.Sequence[hikari.api.Compone
         flare.Row(StatusSelect.make(game)),
         flare.Row(BackButton.make(game)),
     )
+
+
+async def game_add_user_menu(game: GameLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
+    return await asyncio.gather(
+        flare.Row(UserSelect.make(game)),
+        flare.Row(BackButton.make(game)),
+    )
+
+
+class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Select Players to add"):
+    game: GameLite
+    
+    @classmethod
+    def make(cls, game: GameLite) -> typing.Self:
+        return cls(game)
+
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise EditPermissionError("Game")
+        
+        assert ctx.guild_id is not None
+        
+        await ctx.defer()
+        
+        await asyncio.gather(*[
+            plugin.model.players.insert(user.id, self.game.game_id)
+            for user in ctx.users
+        ])
+        
+        game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
+        
+        await ctx.edit_response(
+            embeds=await game_display(game),
+            components=await game_main_menu(game),
+        )
 
 
 class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Change Status"):
@@ -123,12 +159,29 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
             raise EditPermissionError("Game")
 
         assert ctx.guild_id is not None
+        
         await plugin.model.games.update(self.game.game_id, ctx.guild_id, status=ctx.values[0])
         game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
 
         await ctx.edit_response(
             embeds=await game_display(game),
             components=await game_main_menu(game),
+        )
+
+
+class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle.SECONDARY):
+    game: GameLite
+    
+    @classmethod
+    def make(cls, game: GameLite) -> typing.Self:
+        return cls(game)
+    
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise EditPermissionError("Game")
+        
+        await ctx.edit_response(
+            components=await game_add_user_menu(self.game),
         )
 
 
