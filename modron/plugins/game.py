@@ -10,7 +10,6 @@ import hikari
 from modron.db import Game, GameLite, GameStatus, Player
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
 from modron.model import ModronPlugin
-from modron.plugins.system import autocomplete_systems
 
 plugin = ModronPlugin()
 game = crescent.Group(
@@ -673,7 +672,7 @@ class GameCreate:
     system = crescent.option(
         str,
         "The system this game will be using",
-        autocomplete=autocomplete_systems,
+        autocomplete=plugin.model.systems.autocomplete,
     )
 
     auto_setup = crescent.option(
@@ -695,29 +694,11 @@ class GameCreate:
         await GameCreateModal.make(system_id, self.title, self.auto_setup).send(ctx.interaction)
 
 
-async def autocomplete_guild_games(
-    ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-) -> list[hikari.CommandChoice]:
-    assert ctx.guild_id is not None
-
-    results = await plugin.model.games.autocomplete_guild(ctx.guild_id, str(option.value))
-
-    return [hikari.CommandChoice(name=name, value=str(game_id)) for name, game_id in results]
-
-
-async def autocomplete_owned_games(
-    ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-) -> list[hikari.CommandChoice]:
-    results = await plugin.model.games.autocomplete_owned(ctx.user.id, str(option.value))
-
-    return [hikari.CommandChoice(name=name, value=str(game_id)) for name, game_id in results]
-
-
 @plugin.include
 @game.child
 @crescent.command(name="settings", description="view the settings menu for a specific game")
 class GameSettings:
-    name = crescent.option(str, "the name of the game", autocomplete=autocomplete_owned_games)
+    name = crescent.option(str, "the name of the game", autocomplete=plugin.model.games.autocomplete_owned)
 
     async def callback(self, ctx: crescent.Context) -> None:
         assert ctx.guild_id is not None
@@ -744,7 +725,7 @@ class GameSettings:
 @game.child
 @crescent.command(name="info", description="display information for a game")
 class GameInfo:
-    name = crescent.option(str, "the name of the game", autocomplete=autocomplete_guild_games)
+    name = crescent.option(str, "the name of the game", autocomplete=plugin.model.games.autocomplete_guild)
 
     async def callback(self, ctx: crescent.Context) -> None:
         assert ctx.guild_id is not None

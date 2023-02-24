@@ -1,3 +1,6 @@
+import crescent
+import hikari
+
 from modron.db.conn import Conn, DBConn, convert, with_conn
 from modron.db.models import Game, GameLite
 
@@ -171,7 +174,9 @@ class GameDB(DBConn):
         )
 
     @with_conn
-    async def autocomplete_guild(self, conn: Conn, guild_id: int, partial_name: str) -> list[tuple[str, int]]:
+    async def autocomplete_guild(
+        self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
+    ) -> list[hikari.CommandChoice]:
         results = await conn.fetch(
             """
             SELECT
@@ -182,26 +187,30 @@ class GameDB(DBConn):
                 AND name LIKE $2
             LIMIT 25;
             """,
-            guild_id,
-            f"{partial_name}%",
+            ctx.guild_id,
+            f"{option.value}%",
         )
 
-        return [(r["name"], r["game_id"]) for r in results]
+        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
 
     @with_conn
-    async def autocomplete_owned(self, conn: Conn, owner_id: int, partial_name: str) -> list[tuple[str, int]]:
+    async def autocomplete_owned(
+        self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
+    ) -> list[hikari.CommandChoice]:
         results = await conn.fetch(
             """
             SELECT
                 game_id, name
             FROM Games
             WHERE
-                owner_id = $1
-                AND name LIKE $2
+                guild_id = $1
+                AND owner_id = $2
+                AND name LIKE $3
             LIMIT 25;
             """,
-            owner_id,
-            f"{partial_name}%",
+            ctx.guild_id,
+            ctx.user.id,
+            f"{option.value}%",
         )
 
-        return [(r["name"], r["game_id"]) for r in results]
+        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]

@@ -317,21 +317,15 @@ class SystemCreate:
         await SystemCreateModal.make(name=self.name).send(ctx.interaction)
 
 
-async def autocomplete_systems(
-    ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-) -> list[hikari.CommandChoice]:
-    assert ctx.guild_id is not None
-
-    results = await plugin.model.systems.autocomplete(ctx.guild_id, str(option.value))
-
-    return [hikari.CommandChoice(name=name, value=str(system_id)) for name, system_id in results]
-
-
 @plugin.include
 @system.child
 @crescent.command(name="settings", description="view the settings menu for a specific system")
 class SystemSettings:
-    name = crescent.option(str, "the name of the system", autocomplete=autocomplete_systems)
+    name = crescent.option(
+        str,
+        "the name of the system",
+        autocomplete=plugin.model.systems.autocomplete,
+    )
 
     async def callback(self, ctx: crescent.Context) -> None:
         assert ctx.guild_id is not None
@@ -358,7 +352,11 @@ class SystemSettings:
 @system.child
 @crescent.command(name="info", description="display information for a system")
 class SystemInfo:
-    name = crescent.option(str, "the name of the system", autocomplete=autocomplete_systems)
+    name = crescent.option(
+        str,
+        "the name of the system",
+        autocomplete=plugin.model.systems.autocomplete,
+    )
 
     async def callback(self, ctx: crescent.Context) -> None:
         assert ctx.guild_id is not None

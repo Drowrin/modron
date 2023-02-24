@@ -1,3 +1,6 @@
+import crescent
+import hikari
+
 from modron.db.conn import Conn, DBConn, convert, with_conn
 from modron.db.models import System, SystemLite
 
@@ -142,7 +145,9 @@ class SystemDB(DBConn):
         )
 
     @with_conn
-    async def autocomplete(self, conn: Conn, guild_id: int, partial_name: str) -> list[tuple[str, int]]:
+    async def autocomplete(
+        self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
+    ) -> list[hikari.CommandChoice]:
         results = await conn.fetch(
             """
             SELECT
@@ -153,8 +158,8 @@ class SystemDB(DBConn):
                 AND name LIKE $2
             LIMIT 25;
             """,
-            guild_id,
-            f"{partial_name}%",
+            ctx.guild_id,
+            f"{option.value}%",
         )
 
-        return [(r["name"], r["system_id"]) for r in results]
+        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
