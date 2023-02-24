@@ -80,16 +80,23 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     return [embed]
 
 
-async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
+async def game_main_menu(game: GameLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
-        flare.Row(StatusSelect.make(game)),
         flare.Row(
+            EditStatusButton.make(game),
             ToggleSeekingPlayers.make(game),
         ),
         flare.Row(
             EditButton.make(game),
             DeleteButton.make(game),
         ),
+    )
+
+
+async def game_status_menu(game: GameLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
+    return await asyncio.gather(
+        flare.Row(StatusSelect.make(game)),
+        flare.Row(BackButton.make(game)),
     )
 
 
@@ -119,7 +126,42 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
         await plugin.model.games.update(self.game.game_id, ctx.guild_id, status=ctx.values[0])
         game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
 
-        await ctx.edit_response(embeds=await game_display(game), components=await game_main_menu(game))
+        await ctx.edit_response(
+            embeds=await game_display(game),
+            components=await game_main_menu(game),
+        )
+
+
+class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonStyle.SECONDARY):
+    game: GameLite
+    
+    @classmethod
+    def make(cls, game: GameLite) -> typing.Self:
+        return cls(game)
+    
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise EditPermissionError("Game")
+        
+        await ctx.edit_response(
+            components=await game_status_menu(self.game),
+        )
+
+
+class BackButton(flare.Button, label="Back"):
+    game: GameLite
+
+    @classmethod
+    def make(cls, game: GameLite) -> typing.Self:
+        return cls(game)
+
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise EditPermissionError("Game")
+
+        await ctx.edit_response(
+            components=await game_main_menu(self.game),
+        )
 
 
 class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
