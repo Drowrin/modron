@@ -31,7 +31,7 @@ class PlayerDB(DBConn):
             user_id,
             game_id,
         )
-    
+
     @with_conn
     @convert(Player)
     async def get(self, conn: Conn, game_id: int, user_id: int):
@@ -46,7 +46,7 @@ class PlayerDB(DBConn):
             game_id,
             user_id,
         )
-    
+
     @with_conn
     async def update(self, conn: Conn, game_id: int, user_id: int, character_id: int | None = None) -> None:
         await conn.execute(
@@ -62,7 +62,7 @@ class PlayerDB(DBConn):
             user_id,
             character_id,
         )
-    
+
     @with_conn
     async def delete(self, conn: Conn, game_id: int, user_id: int) -> None:
         await conn.execute(
