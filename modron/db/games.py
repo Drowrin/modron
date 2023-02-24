@@ -9,10 +9,10 @@ class GameDB(DBConn):
         self,
         conn: Conn,
         name: str,
-        description: str,
         system_id: int,
         guild_id: int,
         owner_id: int,
+        description: str | None = None,
         image: str | None = None,
     ):
         return await conn.fetchrow(
@@ -51,7 +51,7 @@ class GameDB(DBConn):
             """
             SELECT
                 g.*,
-                (array_agg(s))[1] AS system,
+                array_remove(array_agg(s), NULL) AS system,
                 array_remove(array_agg(c), NULL) AS characters,
                 array_remove(array_agg(p), NULL) AS players
             FROM Games AS g
@@ -61,13 +61,44 @@ class GameDB(DBConn):
             WHERE
                 game_id = $1
                 AND g.guild_id = $2
-                AND s.guild_id = $2
                 AND ($3::bigint IS NULL OR owner_id = $3::bigint)
             GROUP BY game_id;
             """,
             game_id,
             guild_id,
             owner_id,
+        )
+
+    @with_conn
+    async def name_exists(self, conn: Conn, guild_id: int, name: str) -> bool:
+        return await conn.fetchval(
+            """
+            SELECT EXISTS(
+                SELECT 1
+                from Games
+                WHERE
+                    guild_id = $1
+                    AND name = $2
+            )
+            """,
+            guild_id,
+            name,
+        )
+
+    @with_conn
+    async def id_exists(self, conn: Conn, guild_id: int, game_id: int) -> bool:
+        return await conn.fetchval(
+            """
+            SELECT EXISTS(
+                SELECT 1
+                from Games
+                WHERE
+                    guild_id = $1
+                    AND game_id = $2
+            )
+            """,
+            guild_id,
+            game_id,
         )
 
     @with_conn

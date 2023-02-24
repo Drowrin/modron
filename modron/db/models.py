@@ -14,11 +14,12 @@ class SystemLite:
     guild_id: int
 
     name: str
+    description: str | None = None
 
     author_label: str
     player_label: str
 
-    emoji_id: int | None = None
+    image: str | None = None
 
 
 @attrs.define(kw_only=True)
@@ -41,13 +42,13 @@ class GameStatus(typing.NamedTuple("GameStatus", label=str, description=str, col
 class GameLite:
     game_id: int
 
-    system_id: int
+    system_id: int | None = None
 
     guild_id: int
     owner_id: int
 
     name: str
-    description: str
+    description: str | None = None
     image: str | None = None
 
     status: GameStatus = attrs.field(converter=lambda s: GameStatus[s.upper()])
@@ -70,7 +71,7 @@ class GameLite:
 
 @attrs.define(kw_only=True)
 class Game(GameLite):
-    system: SystemLite = attrs.field(converter=lambda r: SystemLite(**r))
+    system: SystemLite | None = attrs.field(converter=lambda rs: next((SystemLite(**r) for r in rs), None))
     characters: list[Character] = attrs.field(converter=lambda rs: [Character(**r) for r in rs])
     players: list[Player] = attrs.field(converter=lambda rs: [Player(**r) for r in rs])
 

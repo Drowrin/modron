@@ -10,6 +10,7 @@ import hikari
 from modron.db import Game, GameLite, GameStatus
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
 from modron.model import ModronPlugin
+from modron.plugins.system_management import autocomplete_systems
 
 plugin = ModronPlugin()
 game = crescent.Group(
@@ -50,14 +51,17 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
         )
         .set_footer("Created")
         .set_thumbnail(game.image)
-        .add_field("System", game.system.name, inline=True)
+        .add_field("System", game.system.name if game.system is not None else "❌ Deleted System", inline=True)
         .add_field("Status", game.status_str, inline=True)
+        .add_field(
+            "Seeking Players",
+            "✅ Yes" if game.seeking_players else "⏹️ No",
+            inline=True,
+        )
     )
 
-    if game.seeking_players:
-        embed.add_field("Seeking Players", "✅ Yes", inline=True)
-
-    embed.add_field("Description", game.description)
+    if game.description is not None:
+        embed.add_field("Description", game.description)
 
     for player in game.players:
         user = plugin.app.cache.get_member(game.guild_id, player.user_id) or await plugin.app.rest.fetch_member(
@@ -66,7 +70,7 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
 
         character = player.get_character_in(game)
 
-        role = game.system.player_label
+        role = game.system.player_label if game.system is not None else "Player"
 
         if character is not None:
             role = f"{role}: {character.name}"
@@ -78,13 +82,13 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
 
 async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
-        flare.Row(StatusSelect.from_game(game)),
+        flare.Row(StatusSelect.make(game)),
         flare.Row(
-            ToggleSeekingPlayers.from_game(game),
+            ToggleSeekingPlayers.make(game),
         ),
         flare.Row(
-            EditButton.from_game(game),
-            DeleteButton.from_game(game),
+            EditButton.make(game),
+            DeleteButton.make(game),
         ),
     )
 
@@ -93,7 +97,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
     game: GameLite
 
     @classmethod
-    def from_game(cls, game: GameLite) -> typing.Self:
+    def make(cls, game: GameLite) -> typing.Self:
         return cls(game).set_options(
             *[
                 hikari.SelectMenuOption(
@@ -122,7 +126,7 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     game: GameLite
 
     @classmethod
-    def from_game(cls, game: GameLite) -> typing.Self:
+    def make(cls, game: GameLite) -> typing.Self:
         return cls(game).set_label("Stop Seeking Players" if game.seeking_players else "Start Seeking Players")
 
     async def callback(self, ctx: flare.MessageContext):
@@ -140,28 +144,28 @@ class EditButton(flare.Button, label="Edit Details"):
     game: GameLite
 
     @classmethod
-    def from_game(cls, game: GameLite) -> typing.Self:
+    def make(cls, game: GameLite) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
         if ctx.user.id != self.game.owner_id:
             raise EditPermissionError("Game")
 
-        await GameEditModal.from_game(self.game).send(ctx.interaction)
+        await GameEditModal.make(self.game).send(ctx.interaction)
 
 
 class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER):
     game: GameLite
 
     @classmethod
-    def from_game(cls, game: GameLite) -> typing.Self:
+    def make(cls, game: GameLite) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
         if ctx.user.id != self.game.owner_id:
             raise EditPermissionError("Game")
 
-        await GameDeleteModal.from_game(self.game).send(ctx.interaction)
+        await GameDeleteModal.make(self.game).send(ctx.interaction)
 
 
 game_name_text_input = flare.TextInput(
@@ -175,23 +179,13 @@ game_name_text_input = flare.TextInput(
 game_description_text_input = flare.TextInput(
     label="Description",
     style=hikari.TextInputStyle.PARAGRAPH,
-    min_length=1,
     max_length=1024,
-    required=True,
-)
-
-game_system_text_input = flare.TextInput(
-    label="System",
-    style=hikari.TextInputStyle.SHORT,
-    min_length=1,
-    max_length=30,
-    required=True,
+    required=False,
 )
 
 game_image_text_input = flare.TextInput(
     label="Image URL",
     style=hikari.TextInputStyle.SHORT,
-    min_length=None,
     max_length=256,
     required=False,
 )
@@ -204,10 +198,15 @@ class GameCreateModal(flare.Modal, title="New Game"):
     description: flare.TextInput = game_description_text_input
     image: flare.TextInput = game_image_text_input
 
+    @classmethod
+    def make(cls, system_id: int, name: str) -> typing.Self:
+        instance = cls(system_id)
+        instance.name.set_value(name)
+        return instance
+
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
-        assert self.description.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -215,11 +214,11 @@ class GameCreateModal(flare.Modal, title="New Game"):
 
         game_lite = await plugin.model.games.insert(
             name=self.name.value,
-            description=self.description.value,
             system_id=self.system_id,
             guild_id=ctx.guild_id,
             owner_id=ctx.user.id,
             # replace '' with None
+            description=self.description.value or None,
             image=self.image.value or None,
         )
         game = await plugin.model.games.get(
@@ -236,15 +235,15 @@ class GameCreateModal(flare.Modal, title="New Game"):
 
 
 class GameEditModal(flare.Modal, title="Edit Game"):
-    game: GameLite
+    game_id: int
 
     name: flare.TextInput = game_name_text_input
     description: flare.TextInput = game_description_text_input
     image: flare.TextInput = game_image_text_input
 
     @classmethod
-    def from_game(cls, game: GameLite) -> typing.Self:
-        instance = cls(game)
+    def make(cls, game: GameLite) -> typing.Self:
+        instance = cls(game.game_id)
         instance.name.set_value(game.name)
         instance.description.set_value(game.description)
         instance.image.set_value(game.image)
@@ -260,17 +259,15 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
         await ctx.defer()
 
-        kwargs = {
-            k: v
-            for k in ["name", "description", "image"]
-            if (v := getattr(self, k).value or None) != getattr(self.game, k)
-        }
-
-        if len(kwargs) == 0:
-            return  # nothing to update
-
-        await plugin.model.games.update(game_id=self.game.game_id, guild_id=ctx.guild_id, **kwargs)
-        game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
+        await plugin.model.games.update(
+            game_id=self.game_id,
+            guild_id=ctx.guild_id,
+            name=self.name.value,
+            # replace '' with None
+            description=self.description.value or None,
+            image=self.image.value or None,
+        )
+        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
             embeds=await game_display(game),
@@ -279,7 +276,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
 
 
 class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
-    game: GameLite
+    game_id: int
 
     confirmation: flare.TextInput = flare.TextInput(
         label='Please confirm by typing "CONFIRM" in caps',
@@ -290,38 +287,29 @@ class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
     )
 
     @classmethod
-    def from_game(cls, game: GameLite) -> typing.Self:
-        return cls(game)
+    def make(cls, game: GameLite) -> typing.Self:
+        return cls(game.game_id)
 
     async def callback(self, ctx: flare.ModalContext) -> None:
         if self.confirmation.value != "CONFIRM":
             raise ConfirmationError()
 
-        await plugin.model.games.delete(self.game.game_id)
+        await plugin.model.games.delete(self.game_id)
         response = await ctx.edit_response("Game successfully deleted!", embeds=[], components=[])
         await asyncio.sleep(5)
         await response.delete()
-
-
-async def autocomplete_systems(
-    ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-) -> list[hikari.CommandChoice]:
-    assert ctx.guild_id is not None
-
-    results = await plugin.model.systems.autocomplete(ctx.guild_id, str(option.value))
-
-    return [hikari.CommandChoice(name=name, value=str(system_id)) for name, system_id in results]
 
 
 @plugin.include
 @game.child
 @crescent.command(name="create", description="create a new game in this server")
 class GameCreate:
+    title = crescent.option(str, "The title of the game being created")
+
     system = crescent.option(
         str,
-        "The system this game will be using (you can change this later)",
+        "The system this game will be using",
         autocomplete=autocomplete_systems,
-        max_length=36,
     )
 
     async def callback(self, ctx: crescent.Context) -> None:
@@ -329,12 +317,12 @@ class GameCreate:
 
         try:
             system_id = int(self.system)
+            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
+                raise AutocompleteSelectError()
         except ValueError as err:
             raise AutocompleteSelectError() from err
 
-        system = await plugin.model.systems.get_lite(system_id, ctx.guild_id)
-
-        await GameCreateModal(system_id=system.system_id).send(ctx.interaction)
+        await GameCreateModal.make(system_id=system_id, name=self.title).send(ctx.interaction)
 
 
 async def autocomplete_guild_games(
@@ -366,6 +354,8 @@ class GameSettings:
 
         try:
             game_id = int(self.name)
+            if not await plugin.model.games.id_exists(ctx.guild_id, game_id):
+                raise AutocompleteSelectError()
         except ValueError as err:
             raise AutocompleteSelectError() from err
 
@@ -391,6 +381,8 @@ class GameInfo:
 
         try:
             game_id = int(self.name)
+            if not await plugin.model.games.id_exists(ctx.guild_id, game_id):
+                raise AutocompleteSelectError()
         except ValueError as err:
             raise AutocompleteSelectError() from err
 
