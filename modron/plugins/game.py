@@ -10,7 +10,7 @@ import hikari
 from modron.db import Game, GameLite, GameStatus, Player
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
 from modron.model import ModronPlugin
-from modron.plugins.system_management import autocomplete_systems
+from modron.plugins.system import autocomplete_systems
 
 plugin = ModronPlugin()
 game = crescent.Group(
@@ -504,7 +504,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
                     mentionable=True,
                 ),
             )
-            
+
             main, info, synopsis, voice, _ = await asyncio.gather(
                 plugin.app.rest.create_guild_text_channel(
                     ctx.guild_id,
@@ -566,7 +566,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
                     ctx.guild_id,
                     ctx.user.id,
                     role.id,
-                )
+                ),
             )
 
             await plugin.model.games.update(
