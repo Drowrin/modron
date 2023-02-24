@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS Games (
     system_id INT,
 
     name VARCHAR(50) NOT NULL,
+    abbreviation VARCHAR(25) NOT NULL,
     description VARCHAR(1024),
 
     guild_id BIGINT NOT NULL,
@@ -37,11 +38,13 @@ CREATE TABLE IF NOT EXISTS Games (
 
     image VARCHAR(256),
 
-    category_id BIGINT,
+    role_id BIGINT,
+
+    category_channel_id BIGINT,
     main_channel_id BIGINT,
     info_channel_id BIGINT,
-    schedule_channel_id BIGINT,
     synopsis_channel_id BIGINT,
+    voice_channel_id BIGINT,
 
     CONSTRAINT games_pk PRIMARY KEY (game_id),
     CONSTRAINT games_name_guild_unique UNIQUE (name, guild_id),

@@ -7,7 +7,7 @@ import crescent
 import flare
 import hikari
 
-from modron.db import Game, GameLite, GameStatus
+from modron.db import Game, GameLite, GameStatus, Player
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
 from modron.model import ModronPlugin
 from modron.plugins.system_management import autocomplete_systems
@@ -46,26 +46,25 @@ async def player_display(game: Game, player: Player) -> hikari.Embed:
     member = plugin.app.cache.get_member(game.guild_id, player.user_id) or await plugin.app.rest.fetch_member(
         game.guild_id, player.user_id
     )
-        
+
     return (
-        hikari.Embed(
-            
-        )
+        hikari.Embed()
         .set_footer(game.system.player_label if game.system is not None else "Player")
         .set_author(name=member.display_name, icon=member.display_avatar_url)
     )
+
 
 async def author_display(game: Game) -> hikari.Embed:
     member = plugin.app.cache.get_member(game.guild_id, game.owner_id) or await plugin.app.rest.fetch_member(
         game.guild_id, game.owner_id
     )
-    
+
     return (
-        hikari.Embed(
-        )
+        hikari.Embed()
         .set_footer(game.system.author_label if game.system is not None else "Game Master")
         .set_author(name=member.display_name, icon=member.display_avatar_url)
     )
+
 
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     embed = (
@@ -88,17 +87,31 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     if game.description is not None:
         embed.add_field("Description", game.description)
 
-    players = [
-        await player_display(game, player)
-        for player in game.players
+    if game.main_channel_id is not None:
+        embed.add_field("Main Channel", f"<#{game.main_channel_id}>", inline=True)
+
+    if game.info_channel_id is not None:
+        embed.add_field("Info Channel", f"<#{game.info_channel_id}>", inline=True)
+
+    if game.synopsis_channel_id is not None:
+        embed.add_field("Synopsis Channel", f"<#{game.synopsis_channel_id}>", inline=True)
+
+    if game.voice_channel_id is not None:
+        embed.add_field("Voice Channel", f"<#{game.voice_channel_id}>", inline=True)
+
+    players = [await player_display(game, player) for player in game.players]
+
+    return [
+        embed,
+        await author_display(game),
+        *players,
     ]
 
-    return [embed, await author_display(game), *players]
 
-
-async def game_main_menu(game: GameLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
+async def game_main_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
         flare.Row(
+            ManageChannelsButton.make(game),
             EditStatusButton.make(game),
             ToggleSeekingPlayers.make(game),
             AddUsersButton.make(game),
@@ -110,18 +123,124 @@ async def game_main_menu(game: GameLite) -> typing.Sequence[hikari.api.Component
     )
 
 
-async def game_status_menu(game: GameLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
+async def game_status_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
         flare.Row(StatusSelect.make(game)),
         flare.Row(BackButton.make(game)),
     )
 
 
-async def game_add_user_menu(game: GameLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
+async def game_add_user_menu(game: Game) -> typing.Sequence[hikari.api.ComponentBuilder]:
     return await asyncio.gather(
         flare.Row(UserSelect.make(game)),
         flare.Row(BackButton.make(game)),
     )
+
+
+async def game_channel_menu(game: Game, kind: ChannelKind) -> typing.Sequence[hikari.api.ComponentBuilder]:
+    return await asyncio.gather(
+        flare.Row(ChannelKindSelect.make(game, kind)),
+        flare.Row(GameChannelSelect.make(game, kind)),
+        flare.Row(BackButton.make(game)),
+    )
+
+
+ChannelKind = typing.Literal["main", "info", "synopsis", "voice", "category"]
+
+
+class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
+    game: Game
+    kind: ChannelKind
+
+    @classmethod
+    def make(cls, game: Game, kind: ChannelKind) -> typing.Self:
+        return cls(game, kind).set_options(
+            hikari.SelectMenuOption(
+                label="Main Channel",
+                value="main",
+                description="Select the main discussion channel for this game",
+                emoji=None,
+                is_default=kind == "main",
+            ),
+            hikari.SelectMenuOption(
+                label="Info Channel",
+                value="info",
+                description="the channel where players can find info and resources",
+                emoji=None,
+                is_default=kind == "info",
+            ),
+            hikari.SelectMenuOption(
+                label="Synopsis Channel",
+                value="synopsis",
+                description="the channel where you will post synopsis of each session",
+                emoji=None,
+                is_default=kind == "synopsis",
+            ),
+            hikari.SelectMenuOption(
+                label="Voice Channel",
+                value="voice",
+                description="the voice channel that players should join during sessions",
+                emoji=None,
+                is_default=kind == "voice",
+            ),
+            hikari.SelectMenuOption(
+                label="Category",
+                value="category",
+                description="the category that contains other channels related to this game",
+                emoji=None,
+                is_default=kind == "category",
+            ),
+        )
+
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise EditPermissionError("Game")
+
+        assert ctx.guild_id is not None
+
+        await ctx.edit_response(
+            embeds=await game_display(self.game),
+            components=await game_channel_menu(self.game, typing.cast(ChannelKind, ctx.values[0])),
+        )
+
+
+class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
+    game: GameLite
+    kind: ChannelKind
+
+    @classmethod
+    def make(cls, game: GameLite, kind: ChannelKind) -> typing.Self:
+        instance = cls(game, kind)
+        instance.set_placeholder(f"Select {kind} channel")
+        match kind:
+            case "main" | "info" | "synopsis":
+                instance.set_channel_types(hikari.ChannelType.GUILD_TEXT)
+            case "voice":
+                instance.set_channel_types(hikari.ChannelType.GUILD_VOICE)
+            case "category":
+                instance.set_channel_types(hikari.ChannelType.GUILD_CATEGORY)
+        return instance
+
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise EditPermissionError("Game")
+
+        assert ctx.guild_id is not None
+
+        key = f"{self.kind}_channel_id"
+        channel_id = next((c.id for c in ctx.channels), None)
+
+        await ctx.defer()
+
+        if getattr(self.game, key) != channel_id:
+            await plugin.model.games.update(self.game.game_id, ctx.guild_id, **{key: channel_id})
+
+        game = await plugin.model.games.get(self.game.game_id, ctx.guild_id)
+
+        await ctx.edit_response(
+            embeds=await game_display(game),
+            components=await game_channel_menu(game, self.kind),
+        )
 
 
 class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Select Players to add"):
@@ -182,11 +301,27 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
         )
 
 
-class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle.SECONDARY):
-    game: GameLite
+class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
+    game: Game
 
     @classmethod
-    def make(cls, game: GameLite) -> typing.Self:
+    def make(cls, game: Game) -> typing.Self:
+        return cls(game).set_label("Manage Channels")
+
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.game.owner_id:
+            raise EditPermissionError("Game")
+
+        await ctx.edit_response(
+            components=await game_channel_menu(self.game, "main"),
+        )
+
+
+class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle.SECONDARY):
+    game: Game
+
+    @classmethod
+    def make(cls, game: Game) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -199,10 +334,10 @@ class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle
 
 
 class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonStyle.SECONDARY):
-    game: GameLite
+    game: Game
 
     @classmethod
-    def make(cls, game: GameLite) -> typing.Self:
+    def make(cls, game: Game) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -215,10 +350,10 @@ class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonS
 
 
 class BackButton(flare.Button, label="Back"):
-    game: GameLite
+    game: Game
 
     @classmethod
-    def make(cls, game: GameLite) -> typing.Self:
+    def make(cls, game: Game) -> typing.Self:
         return cls(game)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -278,14 +413,25 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
 
 game_name_text_input = flare.TextInput(
     label="Title",
+    placeholder="The full title of the game",
     style=hikari.TextInputStyle.SHORT,
     min_length=1,
     max_length=50,
     required=True,
 )
 
+game_abbreviation_text_input = flare.TextInput(
+    label="Abbreviation",
+    placeholder="A short name that will be used when the full title is too long",
+    style=hikari.TextInputStyle.SHORT,
+    min_length=1,
+    max_length=25,
+    required=True,
+)
+
 game_description_text_input = flare.TextInput(
     label="Description",
+    placeholder="Freeform text that will be displayed in the game info. You can use markdown here.",
     style=hikari.TextInputStyle.PARAGRAPH,
     max_length=1024,
     required=False,
@@ -293,6 +439,7 @@ game_description_text_input = flare.TextInput(
 
 game_image_text_input = flare.TextInput(
     label="Image URL",
+    placeholder="URL pointing to an image that will be displayed in the game info",
     style=hikari.TextInputStyle.SHORT,
     max_length=256,
     required=False,
@@ -301,20 +448,23 @@ game_image_text_input = flare.TextInput(
 
 class GameCreateModal(flare.Modal, title="New Game"):
     system_id: int
+    auto_setup: int
 
     name: flare.TextInput = game_name_text_input
+    abbreviation: flare.TextInput = game_abbreviation_text_input
     description: flare.TextInput = game_description_text_input
     image: flare.TextInput = game_image_text_input
 
     @classmethod
-    def make(cls, system_id: int, name: str) -> typing.Self:
-        instance = cls(system_id)
+    def make(cls, system_id: int, name: str, auto_setup: bool) -> typing.Self:
+        instance = cls(system_id, auto_setup)
         instance.name.set_value(name)
         return instance
 
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
+        assert self.abbreviation.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -322,6 +472,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
 
         game_lite = await plugin.model.games.insert(
             name=self.name.value,
+            abbreviation=self.abbreviation.value,
             system_id=self.system_id,
             guild_id=ctx.guild_id,
             owner_id=ctx.user.id,
@@ -329,6 +480,106 @@ class GameCreateModal(flare.Modal, title="New Game"):
             description=self.description.value or None,
             image=self.image.value or None,
         )
+
+        if self.auto_setup:
+            category, role = await asyncio.gather(
+                plugin.app.rest.create_guild_category(
+                    ctx.guild_id,
+                    self.abbreviation.value,
+                    permission_overwrites=[
+                        hikari.PermissionOverwrite(
+                            id=ctx.user.id,
+                            type=hikari.PermissionOverwriteType.MEMBER,
+                            allow=(
+                                hikari.Permissions.MANAGE_CHANNELS
+                                | hikari.Permissions.SEND_MESSAGES
+                                | hikari.Permissions.MANAGE_MESSAGES
+                            ),
+                        )
+                    ],
+                ),
+                plugin.app.rest.create_role(
+                    ctx.guild_id,
+                    name=self.abbreviation.value,
+                    mentionable=True,
+                ),
+            )
+            
+            main, info, synopsis, voice, _ = await asyncio.gather(
+                plugin.app.rest.create_guild_text_channel(
+                    ctx.guild_id,
+                    name="main",
+                    category=category.id,
+                ),
+                plugin.app.rest.create_guild_text_channel(
+                    ctx.guild_id,
+                    name="info",
+                    category=category.id,
+                    permission_overwrites=[
+                        hikari.PermissionOverwrite(
+                            id=ctx.guild_id,  # @everyone
+                            type=hikari.PermissionOverwriteType.ROLE,
+                            deny=(
+                                hikari.Permissions.SEND_MESSAGES
+                                | hikari.Permissions.CREATE_PUBLIC_THREADS
+                                | hikari.Permissions.CREATE_PRIVATE_THREADS
+                                | hikari.Permissions.ADD_REACTIONS
+                            ),
+                        ),
+                    ],
+                ),
+                plugin.app.rest.create_guild_text_channel(
+                    ctx.guild_id,
+                    name="synopsis",
+                    category=category.id,
+                    permission_overwrites=[
+                        hikari.PermissionOverwrite(
+                            id=ctx.guild_id,  # @everyone
+                            type=hikari.PermissionOverwriteType.ROLE,
+                            deny=(
+                                hikari.Permissions.SEND_MESSAGES
+                                | hikari.Permissions.CREATE_PUBLIC_THREADS
+                                | hikari.Permissions.CREATE_PRIVATE_THREADS
+                                | hikari.Permissions.ADD_REACTIONS
+                            ),
+                        ),
+                    ],
+                ),
+                plugin.app.rest.create_guild_voice_channel(
+                    ctx.guild_id,
+                    name="Voice",
+                    category=category.id,
+                    permission_overwrites=[
+                        hikari.PermissionOverwrite(
+                            id=ctx.guild_id,  # @everyone
+                            type=hikari.PermissionOverwriteType.ROLE,
+                            deny=hikari.Permissions.CONNECT,
+                        ),
+                        hikari.PermissionOverwrite(
+                            id=role.id,
+                            type=hikari.PermissionOverwriteType.ROLE,
+                            allow=hikari.Permissions.CONNECT,
+                        ),
+                    ],
+                ),
+                plugin.app.rest.add_role_to_member(
+                    ctx.guild_id,
+                    ctx.user.id,
+                    role.id,
+                )
+            )
+
+            await plugin.model.games.update(
+                game_lite.game_id,
+                ctx.guild_id,
+                role_id=role.id,
+                category_channel_id=category.id,
+                main_channel_id=main.id,
+                info_channel_id=info.id,
+                synopsis_channel_id=synopsis.id,
+                voice_channel_id=voice.id,
+            )
+
         game = await plugin.model.games.get(
             game_lite.game_id,
             ctx.guild_id,
@@ -346,6 +597,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     game_id: int
 
     name: flare.TextInput = game_name_text_input
+    abbreviation: flare.TextInput = game_abbreviation_text_input
     description: flare.TextInput = game_description_text_input
     image: flare.TextInput = game_image_text_input
 
@@ -361,7 +613,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
-        assert self.description.value is not None
+        assert self.abbreviation.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -371,6 +623,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
             game_id=self.game_id,
             guild_id=ctx.guild_id,
             name=self.name.value,
+            abbreviation=self.name.value,
             # replace '' with None
             description=self.description.value or None,
             image=self.image.value or None,
@@ -412,12 +665,21 @@ class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
 @game.child
 @crescent.command(name="create", description="create a new game in this server")
 class GameCreate:
-    title = crescent.option(str, "The title of the game being created")
+    title = crescent.option(
+        str,
+        "The title of the game being created",
+    )
 
     system = crescent.option(
         str,
         "The system this game will be using",
         autocomplete=autocomplete_systems,
+    )
+
+    auto_setup = crescent.option(
+        bool,
+        "Create a custom category, channels, and role with a recommended layout",
+        default=True,
     )
 
     async def callback(self, ctx: crescent.Context) -> None:
@@ -430,7 +692,7 @@ class GameCreate:
         except ValueError as err:
             raise AutocompleteSelectError() from err
 
-        await GameCreateModal.make(system_id=system_id, name=self.title).send(ctx.interaction)
+        await GameCreateModal.make(system_id, self.title, self.auto_setup).send(ctx.interaction)
 
 
 async def autocomplete_guild_games(

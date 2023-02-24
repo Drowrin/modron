@@ -9,6 +9,7 @@ class GameDB(DBConn):
         self,
         conn: Conn,
         name: str,
+        abbreviation: str,
         system_id: int,
         guild_id: int,
         owner_id: int,
@@ -17,11 +18,12 @@ class GameDB(DBConn):
     ):
         return await conn.fetchrow(
             """
-            INSERT INTO Games (name, description, system_id, guild_id, owner_id, image)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO Games (name, abbreviation, description, system_id, guild_id, owner_id, image)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *;
             """,
             name,
+            abbreviation,
             description,
             system_id,
             guild_id,
@@ -108,20 +110,34 @@ class GameDB(DBConn):
         game_id: int,
         guild_id: int,
         name: str | None = None,
+        abbreviation: str | None = None,
         description: str | None = None,
         image: str | None = None,
         status: str | None = None,
         seeking_players: bool | None = None,
+        category_channel_id: int | None = None,
+        main_channel_id: int | None = None,
+        info_channel_id: int | None = None,
+        synopsis_channel_id: int | None = None,
+        voice_channel_id: int | None = None,
+        role_id: int | None = None,
     ):
         await conn.execute(
             """
             UPDATE Games
             SET
                 name = COALESCE($3, name),
-                description = COALESCE($4, description),
-                image = COALESCE($5, image),
-                status = COALESCE($6, status),
-                seeking_players = COALESCE($7, seeking_players)
+                abbreviation = COALESCE($4, abbreviation),
+                description = COALESCE($5, description),
+                image = COALESCE($6, image),
+                status = COALESCE($7, status),
+                seeking_players = COALESCE($8, seeking_players),
+                category_channel_id = COALESCE($9, category_channel_id),
+                main_channel_id = COALESCE($10, main_channel_id),
+                info_channel_id = COALESCE($11, info_channel_id),
+                synopsis_channel_id = COALESCE($12, synopsis_channel_id),
+                voice_channel_id = COALESCE($13, voice_channel_id),
+                role_id = COALESCE($14, role_id)
             WHERE
                 game_id = $1
                 AND guild_id = $2;
@@ -129,10 +145,17 @@ class GameDB(DBConn):
             game_id,
             guild_id,
             name,
+            abbreviation,
             description,
             image,
             status,
             seeking_players,
+            category_channel_id,
+            main_channel_id,
+            info_channel_id,
+            synopsis_channel_id,
+            voice_channel_id,
+            role_id,
         )
 
     @with_conn

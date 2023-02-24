@@ -48,6 +48,7 @@ class GameLite:
     owner_id: int
 
     name: str
+    abbreviation: str
     description: str | None = None
     image: str | None = None
 
@@ -56,11 +57,13 @@ class GameLite:
 
     created_at: datetime
 
-    category_id: int | None = None
+    role_id: int | None = None
+
+    category_channel_id: int | None = None
     main_channel_id: int | None = None
     info_channel_id: int | None = None
-    schedule_channel_id: int | None = None
     synopsis_channel_id: int | None = None
+    voice_channel_id: int | None = None
 
     @property
     def status_str(self) -> str:
