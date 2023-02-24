@@ -42,6 +42,31 @@ flare.add_converter(Game, GameConverter)
 flare.add_converter(GameLite, GameLiteConverter)
 
 
+async def player_display(game: Game, player: Player) -> hikari.Embed:
+    member = plugin.app.cache.get_member(game.guild_id, player.user_id) or await plugin.app.rest.fetch_member(
+        game.guild_id, player.user_id
+    )
+        
+    return (
+        hikari.Embed(
+            
+        )
+        .set_footer(game.system.player_label if game.system is not None else "Player")
+        .set_author(name=member.display_name, icon=member.display_avatar_url)
+    )
+
+async def author_display(game: Game) -> hikari.Embed:
+    member = plugin.app.cache.get_member(game.guild_id, game.owner_id) or await plugin.app.rest.fetch_member(
+        game.guild_id, game.owner_id
+    )
+    
+    return (
+        hikari.Embed(
+        )
+        .set_footer(game.system.author_label if game.system is not None else "Game Master")
+        .set_author(name=member.display_name, icon=member.display_avatar_url)
+    )
+
 async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     embed = (
         hikari.Embed(
@@ -63,21 +88,12 @@ async def game_display(game: Game) -> typing.Sequence[hikari.Embed]:
     if game.description is not None:
         embed.add_field("Description", game.description)
 
-    for player in game.players:
-        user = plugin.app.cache.get_member(game.guild_id, player.user_id) or await plugin.app.rest.fetch_member(
-            game.guild_id, player.user_id
-        )
+    players = [
+        await player_display(game, player)
+        for player in game.players
+    ]
 
-        character = player.get_character_in(game)
-
-        role = game.system.player_label if game.system is not None else "Player"
-
-        if character is not None:
-            role = f"{role}: {character.name}"
-
-        embed.add_field(user.display_name, role, inline=True)
-
-    return [embed]
+    return [embed, await author_display(game), *players]
 
 
 async def game_main_menu(game: GameLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
