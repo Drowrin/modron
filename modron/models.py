@@ -149,7 +149,7 @@ class GameLite:
     @property
     def author_label(self) -> str:
         if self.system is None:
-            return "Game Master"
+            return "Author"
         return self.system.author_label
 
     @property

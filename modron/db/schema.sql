@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS Systems (
     name VARCHAR(30) NOT NULL,
     description VARCHAR(1024),
 
-    author_label VARCHAR(30) NOT NULL,
-    player_label VARCHAR(30) NOT NULL,
+    author_label VARCHAR(30) DEFAULT "Author",
+    player_label VARCHAR(30) DEFAULT "Player",
 
     image VARCHAR(256),
 

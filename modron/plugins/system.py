@@ -111,18 +111,18 @@ system_name_text_input = flare.TextInput(
 
 system_author_text_input = flare.TextInput(
     label="Author Label",
+    placeholder="Author",
     style=hikari.TextInputStyle.SHORT,
     min_length=1,
     max_length=30,
-    required=True,
 )
 
 system_player_text_input = flare.TextInput(
     label="Player Label",
+    placeholder="Player",
     style=hikari.TextInputStyle.SHORT,
     min_length=1,
     max_length=30,
-    required=True,
 )
 
 system_description_text_input = flare.TextInput(
@@ -151,7 +151,7 @@ class SystemCreateModal(flare.Modal, title="New System"):
     def make(
         cls,
         name: str,
-        author_label: str = "Game Master",
+        author_label: str = "Author",
         player_label: str = "Player",
         description: str | None = None,
         image: str | None = None,
@@ -177,9 +177,9 @@ class SystemCreateModal(flare.Modal, title="New System"):
         system = await plugin.model.systems.insert(
             guild_id=ctx.guild_id,
             name=self.name.value,
-            author_label=self.author_label.value,
-            player_label=self.player_label.value,
             # replace '' with None
+            author_label=self.author_label.value or None,
+            player_label=self.player_label.value or None,
             description=self.description.value or None,
             image=self.image.value or None,
         )

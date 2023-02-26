@@ -13,8 +13,8 @@ class SystemDB(DBConn):
         conn: Conn,
         guild_id: int,
         name: str,
-        author_label: str,
-        player_label: str,
+        author_label: str | None = None,
+        player_label: str | None = None,
         description: str | None = None,
         image: str | None = None,
     ):
