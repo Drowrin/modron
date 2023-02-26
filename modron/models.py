@@ -158,20 +158,6 @@ class GameLite:
             return "Player"
         return self.system.player_label
 
-    @property
-    def has_any_guild_resources(self) -> bool:
-        return any(
-            c is not None
-            for c in [
-                self.main_channel_id,
-                self.info_channel_id,
-                self.synopsis_channel_id,
-                self.voice_channel_id,
-                self.category_channel_id,
-                self.role_id,
-            ]
-        )
-
     async def embed(
         self, *, abbreviation: bool = False, description: bool = False, guild_resources: bool = False
     ) -> hikari.Embed:
@@ -201,23 +187,18 @@ class GameLite:
         if description and self.description is not None:
             embed.add_field("Description", self.description)
 
-        if guild_resources and self.has_any_guild_resources:
-            embed.add_field(
-                "Connected Guild Resources",
-                "These channels, categories, and roles are used by multiple bot features",
-            )
-
+        if guild_resources:
             if self.main_channel_id is not None:
-                embed.add_field("Main", f"<#{self.main_channel_id}>", inline=True)
+                embed.add_field("Main Channel", f"<#{self.main_channel_id}>", inline=True)
 
             if self.info_channel_id is not None:
-                embed.add_field("Info", f"<#{self.info_channel_id}>", inline=True)
+                embed.add_field("Info Channel", f"<#{self.info_channel_id}>", inline=True)
 
             if self.synopsis_channel_id is not None:
-                embed.add_field("Synopsis", f"<#{self.synopsis_channel_id}>", inline=True)
+                embed.add_field("Synopsis Channel", f"<#{self.synopsis_channel_id}>", inline=True)
 
             if self.voice_channel_id is not None:
-                embed.add_field("Voice", f"<#{self.voice_channel_id}>", inline=True)
+                embed.add_field("Voice Channel", f"<#{self.voice_channel_id}>", inline=True)
 
             if self.category_channel_id is not None:
                 embed.add_field("Category", f"<#{self.category_channel_id}>", inline=True)
