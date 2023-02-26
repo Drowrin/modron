@@ -23,13 +23,13 @@ def with_model(f: SigT[SpecT, ReturnT]) -> typing.Callable[SpecT, typing.Corouti
 
         await app.start()
 
-        async with app.acquire(config.discord_token, token_type=hikari.TokenType.BOT) as rest:
-            await model.start(rest)
+        try:
+            async with app.acquire(config.discord_token, token_type=hikari.TokenType.BOT) as rest:
+                await model.start(rest)
 
-            out = await f(rest, model, *args, **kwargs)
-
-        await app.close()
-        await model.close()
-        return out
+                return await f(rest, model, *args, **kwargs)
+        finally:
+            await app.close()
+            await model.close()
 
     return inner
