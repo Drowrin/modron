@@ -95,7 +95,7 @@ async def channel_settings_view(game: Game, kind: ChannelKind) -> Response:
     }
 
 
-async def add_user_view(game: Game) -> Response:
+async def add_users_view(game: Game) -> Response:
     return {
         "content": None,
         "embeds": [await game.embed(players=True)],
@@ -225,7 +225,7 @@ class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Sel
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
-            **await settings_view(game),
+            **await add_users_view(game),
         )
 
 
@@ -261,7 +261,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
-            **await settings_view(game),
+            **await status_settings_view(game),
         )
 
 
@@ -299,7 +299,7 @@ class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
-            **await add_user_view(game),
+            **await add_users_view(game),
         )
 
 
