@@ -227,29 +227,46 @@ class GameLite:
         )
 
     def category_overwrites(self) -> list[hikari.PermissionOverwrite]:
+        perms = (
+            hikari.Permissions.MANAGE_CHANNELS
+            | hikari.Permissions.SEND_MESSAGES
+            | hikari.Permissions.MANAGE_MESSAGES
+        )
         return [
             hikari.PermissionOverwrite(
                 id=self.author_id,
                 type=hikari.PermissionOverwriteType.MEMBER,
-                allow=(
-                    hikari.Permissions.MANAGE_CHANNELS
-                    | hikari.Permissions.SEND_MESSAGES
-                    | hikari.Permissions.MANAGE_MESSAGES
-                ),
-            )
+                allow=perms,
+            ),
+            hikari.PermissionOverwrite(
+                id=plugin.model.app_id,
+                type=hikari.PermissionOverwriteType.MEMBER,
+                allow=perms,
+            ),
         ]
 
     def read_only_overwrites(self):
+        perms = (
+            hikari.Permissions.SEND_MESSAGES
+            | hikari.Permissions.CREATE_PUBLIC_THREADS
+            | hikari.Permissions.CREATE_PRIVATE_THREADS
+            | hikari.Permissions.ADD_REACTIONS
+        )
         return [
             hikari.PermissionOverwrite(
                 id=self.guild_id,  # @everyone
                 type=hikari.PermissionOverwriteType.ROLE,
-                deny=(
-                    hikari.Permissions.SEND_MESSAGES
-                    | hikari.Permissions.CREATE_PUBLIC_THREADS
-                    | hikari.Permissions.CREATE_PRIVATE_THREADS
-                    | hikari.Permissions.ADD_REACTIONS
-                ),
+                deny=perms,
+            ),
+            hikari.PermissionOverwrite(
+                id=self.author_id,
+                type=hikari.PermissionOverwriteType.MEMBER,
+                allow=perms,
+            ),
+            hikari.PermissionOverwrite(
+                id=plugin.model.app_id,
+                type=hikari.PermissionOverwriteType.MEMBER,
+                allow=perms,
             ),
         ]
 
@@ -268,6 +285,11 @@ class GameLite:
             hikari.PermissionOverwrite(
                 id=role_id,
                 type=hikari.PermissionOverwriteType.ROLE,
+                allow=hikari.Permissions.CONNECT,
+            ),
+            hikari.PermissionOverwrite(
+                id=plugin.model.app_id,
+                type=hikari.PermissionOverwriteType.MEMBER,
                 allow=hikari.Permissions.CONNECT,
             ),
         ]

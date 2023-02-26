@@ -18,6 +18,7 @@ class Model:
         self.players: PlayerDB
         self.characters: CharacterDB
 
+        self.app_id: hikari.Snowflake
         self.command_ids: dict[str, hikari.Snowflake] = {}
 
     async def start(self, client: hikari.api.RESTClient) -> None:
@@ -28,6 +29,8 @@ class Model:
         self.characters = CharacterDB(self.db_pool)
 
         application = await client.fetch_application()
+        self.app_id = application.id
+        
         commands = await client.fetch_application_commands(application.id)
         self.command_ids = {c.name: c.id for c in commands if isinstance(c, hikari.SlashCommand)}
 
