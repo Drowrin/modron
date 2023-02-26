@@ -27,18 +27,18 @@ game = crescent.Group(
 )
 
 
-class OwnerAware(typing.Protocol):
-    owner_id: int
+class AuthorAware(typing.Protocol):
+    author_id: int
 
 
-OwnerAwareT = typing.TypeVar("OwnerAwareT", bound=OwnerAware)
-SignatureT = typing.Callable[[OwnerAwareT, flare.MessageContext], typing.Coroutine[typing.Any, typing.Any, None]]
+AuthorAwareT = typing.TypeVar("AuthorAwareT", bound=AuthorAware)
+SignatureT = typing.Callable[[AuthorAwareT, flare.MessageContext], typing.Coroutine[typing.Any, typing.Any, None]]
 
 
-def only_owner(f: SignatureT[OwnerAwareT]):
+def only_author(f: SignatureT[AuthorAwareT]):
     @functools.wraps(f)
-    async def inner(self: OwnerAwareT, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
+    async def inner(self: AuthorAwareT, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.author_id:
             raise EditPermissionError("Game")
         return await f(self, ctx)
 
@@ -59,14 +59,14 @@ async def settings_view(game: Game) -> Response:
         "embeds": [await game.embed(abbreviation=True, description=True, guild_resources=True, players=True)],
         "components": await asyncio.gather(
             flare.Row(
-                ManageChannelsButton.make(game.game_id, game.owner_id),
-                EditStatusButton.make(game.game_id, game.owner_id),
-                ToggleSeekingPlayers.make(game.game_id, game.owner_id, game.seeking_players),
-                AddUsersButton.make(game.game_id, game.owner_id),
+                ManageChannelsButton.make(game.game_id, game.author_id),
+                EditStatusButton.make(game.game_id, game.author_id),
+                ToggleSeekingPlayers.make(game.game_id, game.author_id, game.seeking_players),
+                AddUsersButton.make(game.game_id, game.author_id),
             ),
             flare.Row(
-                EditButton.make(game.game_id, game.owner_id),
-                DeleteButton.make(game.game_id, game.owner_id),
+                EditButton.make(game.game_id, game.author_id),
+                DeleteButton.make(game.game_id, game.author_id),
             ),
         ),
     }
@@ -77,8 +77,8 @@ async def status_settings_view(game: Game) -> Response:
         "content": None,
         "embeds": [await game.embed()],
         "components": await asyncio.gather(
-            flare.Row(StatusSelect.make(game.game_id, game.owner_id, game.status)),
-            flare.Row(BackButton.make(game.game_id, game.owner_id)),
+            flare.Row(StatusSelect.make(game.game_id, game.author_id, game.status)),
+            flare.Row(BackButton.make(game.game_id, game.author_id)),
         ),
     }
 
@@ -88,9 +88,9 @@ async def channel_settings_view(game: Game, kind: ChannelKind) -> Response:
         "content": None,
         "embeds": [await game.embed(guild_resources=True)],
         "components": await asyncio.gather(
-            flare.Row(ChannelKindSelect.make(game.game_id, game.owner_id, kind)),
-            flare.Row(GameChannelSelect.make(game.game_id, game.owner_id, kind)),
-            flare.Row(BackButton.make(game.game_id, game.owner_id)),
+            flare.Row(ChannelKindSelect.make(game.game_id, game.author_id, kind)),
+            flare.Row(GameChannelSelect.make(game.game_id, game.author_id, kind)),
+            flare.Row(BackButton.make(game.game_id, game.author_id)),
         ),
     }
 
@@ -100,8 +100,8 @@ async def add_users_view(game: Game) -> Response:
         "content": None,
         "embeds": [await game.embed(players=True)],
         "components": await asyncio.gather(
-            flare.Row(UserSelect.make(game.game_id, game.owner_id)),
-            flare.Row(BackButton.make(game.game_id, game.owner_id)),
+            flare.Row(UserSelect.make(game.game_id, game.author_id)),
+            flare.Row(BackButton.make(game.game_id, game.author_id)),
         ),
     }
 
@@ -111,12 +111,12 @@ ChannelKind = typing.Literal["main", "info", "synopsis", "voice", "category"]
 
 class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
     game_id: int
-    owner_id: int
+    author_id: int
     kind: ChannelKind
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int, kind: ChannelKind) -> typing.Self:
-        return cls(game_id, owner_id, kind).set_options(
+    def make(cls, game_id: int, author_id: int, kind: ChannelKind) -> typing.Self:
+        return cls(game_id, author_id, kind).set_options(
             hikari.SelectMenuOption(
                 label="Main Channel",
                 value="main",
@@ -154,7 +154,7 @@ class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
             ),
         )
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -167,12 +167,12 @@ class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
 
 class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
     game_id: int
-    owner_id: int
+    author_id: int
     kind: ChannelKind
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int, kind: ChannelKind) -> typing.Self:
-        instance = cls(game_id, owner_id, kind)
+    def make(cls, game_id: int, author_id: int, kind: ChannelKind) -> typing.Self:
+        instance = cls(game_id, author_id, kind)
         instance.set_placeholder(f"Select {kind} channel")
         match kind:
             case "main" | "info" | "synopsis":
@@ -183,7 +183,7 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
                 instance.set_channel_types(hikari.ChannelType.GUILD_CATEGORY)
         return instance
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -204,17 +204,17 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
 
 class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Select Players to add"):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
     def make(
         cls,
         game_id: int,
-        owner_id: int,
+        author_id: int,
     ) -> typing.Self:
-        return cls(game_id, owner_id)
+        return cls(game_id, author_id)
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -231,11 +231,11 @@ class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Sel
 
 class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Change Status"):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int, game_status: GameStatus) -> typing.Self:
-        return cls(game_id, owner_id).set_options(
+    def make(cls, game_id: int, author_id: int, game_status: GameStatus) -> typing.Self:
+        return cls(game_id, author_id).set_options(
             *[
                 hikari.SelectMenuOption(
                     label=status.label,
@@ -248,7 +248,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
             ]
         )
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -267,13 +267,13 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
 
 class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int) -> typing.Self:
-        return cls(game_id, owner_id).set_label("Manage Channels")
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id).set_label("Manage Channels")
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -286,13 +286,13 @@ class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
 
 class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle.SECONDARY):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int) -> typing.Self:
-        return cls(game_id, owner_id)
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id)
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -305,13 +305,13 @@ class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle
 
 class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonStyle.SECONDARY):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int) -> typing.Self:
-        return cls(game_id, owner_id)
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id)
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -324,13 +324,13 @@ class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonS
 
 class BackButton(flare.Button, label="Back"):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int) -> typing.Self:
-        return cls(game_id, owner_id)
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id)
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -343,16 +343,16 @@ class BackButton(flare.Button, label="Back"):
 
 class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     game_id: int
-    owner_id: int
+    author_id: int
     seeking_players: bool
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int, seeking_players: bool) -> typing.Self:
-        return cls(game_id, owner_id, seeking_players).set_label(
+    def make(cls, game_id: int, author_id: int, seeking_players: bool) -> typing.Self:
+        return cls(game_id, author_id, seeking_players).set_label(
             "Stop Seeking Players" if seeking_players else "Start Seeking Players"
         )
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext):
         assert ctx.guild_id is not None
 
@@ -369,13 +369,13 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
 
 class EditButton(flare.Button, label="Edit Details"):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int) -> typing.Self:
-        return cls(game_id, owner_id)
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id)
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -386,13 +386,13 @@ class EditButton(flare.Button, label="Edit Details"):
 
 class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER):
     game_id: int
-    owner_id: int
+    author_id: int
 
     @classmethod
-    def make(cls, game_id: int, owner_id: int) -> typing.Self:
-        return cls(game_id, owner_id)
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id)
 
-    @only_owner
+    @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
@@ -465,7 +465,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
             abbreviation=self.abbreviation.value,
             system_id=self.system_id,
             guild_id=ctx.guild_id,
-            owner_id=ctx.user.id,
+            author_id=ctx.user.id,
             # replace '' with None
             description=self.description.value or None,
             image=self.image.value or None,
@@ -612,7 +612,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         await plugin.model.games.update(
             game_id=self.game_id,
             guild_id=ctx.guild_id,
-            owner_id=ctx.user.id,
+            author_id=ctx.user.id,
             name=self.name.value,
             abbreviation=self.abbreviation.value,
             # replace '' with None

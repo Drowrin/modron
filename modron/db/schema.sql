@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS Games (
     description VARCHAR(1024),
 
     guild_id BIGINT NOT NULL,
-    owner_id BIGINT NOT NULL,
+    author_id BIGINT NOT NULL,
 
     status game_status NOT NULL DEFAULT 'unstarted',
     seeking_players BOOLEAN NOT NULL DEFAULT TRUE,

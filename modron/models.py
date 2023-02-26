@@ -114,7 +114,7 @@ class GameLite:
     system: SystemLite | None = attrs.field(converter=system_converter, default=None)
 
     guild_id: int
-    owner_id: int
+    author_id: int
 
     name: str
     abbreviation: str
@@ -209,7 +209,7 @@ class GameLite:
         return embed
 
     async def author_embed(self) -> hikari.Embed:
-        member = await get_member(self.guild_id, self.owner_id)
+        member = await get_member(self.guild_id, self.author_id)
 
         return hikari.Embed(title=self.author_label).set_author(
             name=member.display_name, icon=member.display_avatar_url

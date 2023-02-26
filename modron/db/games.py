@@ -15,13 +15,13 @@ class GameDB(DBConn):
         abbreviation: str,
         system_id: int,
         guild_id: int,
-        owner_id: int,
+        author_id: int,
         description: str | None = None,
         image: str | None = None,
     ):
         return await conn.fetchrow(
             """
-            INSERT INTO Games (name, abbreviation, description, system_id, guild_id, owner_id, image)
+            INSERT INTO Games (name, abbreviation, description, system_id, guild_id, author_id, image)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *;
             """,
@@ -30,7 +30,7 @@ class GameDB(DBConn):
             description,
             system_id,
             guild_id,
-            owner_id,
+            author_id,
             image,
         )
 
@@ -114,7 +114,7 @@ class GameDB(DBConn):
         conn: Conn,
         game_id: int,
         guild_id: int,
-        owner_id: int,
+        author_id: int,
         name: str | None = None,
         abbreviation: str | None = None,
         description: str | None = None,
@@ -149,11 +149,11 @@ class GameDB(DBConn):
             WHERE
                 game_id = $1
                 AND guild_id = $2
-                AND owner_id = $3;
+                AND author_id = $3;
             """,
             game_id,
             guild_id,
-            owner_id,
+            author_id,
             name,
             abbreviation,
             description,
@@ -211,7 +211,7 @@ class GameDB(DBConn):
             FROM Games
             WHERE
                 guild_id = $1
-                AND owner_id = $2
+                AND author_id = $2
                 AND name LIKE $3
             LIMIT 25;
             """,
