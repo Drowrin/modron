@@ -412,7 +412,7 @@ game_name_text_input = flare.TextInput(
 
 game_abbreviation_text_input = flare.TextInput(
     label="Abbreviation",
-    placeholder="A short name that will be used when the full title is too long",
+    placeholder="An optional short name",
     style=hikari.TextInputStyle.SHORT,
     min_length=1,
     max_length=25,
@@ -421,7 +421,7 @@ game_abbreviation_text_input = flare.TextInput(
 
 game_description_text_input = flare.TextInput(
     label="Description",
-    placeholder="Freeform text that will be displayed in the game info. You can use markdown here.",
+    placeholder="Freeform text that will be displayed in the game info.\nYou *can* use **markdown** here.",
     style=hikari.TextInputStyle.PARAGRAPH,
     max_length=1024,
     required=False,
@@ -429,7 +429,7 @@ game_description_text_input = flare.TextInput(
 
 game_image_text_input = flare.TextInput(
     label="Image URL",
-    placeholder="URL pointing to an image that will be displayed in the game info",
+    placeholder="URL pointing to an image",
     style=hikari.TextInputStyle.SHORT,
     max_length=256,
     required=False,
