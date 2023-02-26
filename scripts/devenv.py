@@ -29,6 +29,7 @@ def with_model(f: SigT[SpecT, ReturnT]) -> typing.Callable[SpecT, typing.Corouti
             out = await f(rest, model, *args, **kwargs)
 
         await app.close()
+        await model.close()
         return out
 
     return inner
