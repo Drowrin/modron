@@ -211,11 +211,11 @@ class GameLite:
             if self.voice_channel_id is not None:
                 embed.add_field("Voice Channel", f"<#{self.voice_channel_id}>", inline=True)
 
-            if self.category_channel_id is not None:
-                embed.add_field("Category", f"<#{self.category_channel_id}>", inline=True)
-
             if self.role_id is not None:
                 embed.add_field("Role", f"<@&{self.role_id}>", inline=True)
+
+            if self.category_channel_id is not None:
+                embed.add_field("Category", f"<#{self.category_channel_id}>", inline=True)
 
         return embed
 
