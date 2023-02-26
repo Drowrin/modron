@@ -153,8 +153,8 @@ class SystemCreateModal(flare.Modal, title="New System"):
     def make(
         cls,
         name: str,
-        author_label: str = "Author",
-        player_label: str = "Player",
+        author_label: str | None = None,
+        player_label: str | None = None,
         description: str | None = None,
         image: str | None = None,
     ) -> typing.Self:
