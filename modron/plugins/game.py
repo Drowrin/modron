@@ -414,9 +414,8 @@ game_abbreviation_text_input = flare.TextInput(
     label="Abbreviation",
     placeholder="An optional short name",
     style=hikari.TextInputStyle.SHORT,
-    min_length=1,
     max_length=25,
-    required=True,
+    required=False,
 )
 
 game_description_text_input = flare.TextInput(
@@ -446,15 +445,15 @@ class GameCreateModal(flare.Modal, title="New Game"):
     image: flare.TextInput = game_image_text_input
 
     @classmethod
-    def make(cls, system_id: int, name: str, auto_setup: bool) -> typing.Self:
+    def make(cls, system_id: int, name: str, abbreviation: str, auto_setup: bool) -> typing.Self:
         instance = cls(system_id, auto_setup)
         instance.name.set_value(name)
+        instance.abbreviation.set_value(abbreviation)
         return instance
 
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
-        assert self.abbreviation.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -462,11 +461,11 @@ class GameCreateModal(flare.Modal, title="New Game"):
 
         game_lite = await plugin.model.games.insert(
             name=self.name.value,
-            abbreviation=self.abbreviation.value,
             system_id=self.system_id,
             guild_id=ctx.guild_id,
             author_id=ctx.user.id,
             # replace '' with None
+            abbreviation=self.abbreviation.value or None,
             description=self.description.value or None,
             image=self.image.value or None,
         )
@@ -475,7 +474,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
             category, role = await asyncio.gather(
                 plugin.app.rest.create_guild_category(
                     ctx.guild_id,
-                    self.abbreviation.value,
+                    game_lite.abbreviation,
                     permission_overwrites=[
                         hikari.PermissionOverwrite(
                             id=ctx.user.id,
@@ -490,7 +489,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
                 ),
                 plugin.app.rest.create_role(
                     ctx.guild_id,
-                    name=self.abbreviation.value,
+                    name=game_lite.abbreviation,
                     mentionable=True,
                 ),
             )
@@ -603,7 +602,6 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     async def callback(self, ctx: flare.ModalContext) -> None:
         # these are marked as required, so they should not be None
         assert self.name.value is not None
-        assert self.abbreviation.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
 
@@ -614,8 +612,8 @@ class GameEditModal(flare.Modal, title="Edit Game"):
             guild_id=ctx.guild_id,
             author_id=ctx.user.id,
             name=self.name.value,
-            abbreviation=self.abbreviation.value,
             # replace '' with None
+            abbreviation=self.abbreviation.value or None,
             description=self.description.value or None,
             image=self.image.value or None,
         )
@@ -682,7 +680,7 @@ class GameCreate:
             if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
                 raise AutocompleteSelectError()
 
-        await GameCreateModal.make(system_id, self.title, self.auto_setup).send(ctx.interaction)
+        await GameCreateModal.make(system_id, self.title, self.title[:25], self.auto_setup).send(ctx.interaction)
 
 
 @plugin.include

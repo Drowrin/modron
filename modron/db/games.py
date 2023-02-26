@@ -12,13 +12,14 @@ class GameDB(DBConn):
         self,
         conn: Conn,
         name: str,
-        abbreviation: str,
         system_id: int,
         guild_id: int,
         author_id: int,
+        abbreviation: str | None = None,
         description: str | None = None,
         image: str | None = None,
     ):
+        abbreviation = abbreviation or name[:25]
         return await conn.fetchrow(
             """
             INSERT INTO Games (name, abbreviation, description, system_id, guild_id, author_id, image)

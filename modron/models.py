@@ -117,7 +117,7 @@ class GameLite:
     author_id: int
 
     name: str
-    abbreviation: str
+    abbreviation: str = attrs.field()
     description: str | None = None
     image: str | None = None
 
@@ -133,6 +133,10 @@ class GameLite:
     info_channel_id: int | None = None
     synopsis_channel_id: int | None = None
     voice_channel_id: int | None = None
+
+    @abbreviation.default  # type: ignore
+    def _default_abbreviation(self) -> str:
+        return self.name[:25]
 
     @property
     def status_str(self) -> str:
