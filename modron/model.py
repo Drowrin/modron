@@ -1,4 +1,4 @@
-from hikari import RESTAware, SlashCommand, Snowflake
+import hikari
 
 from modron.config import Config
 from modron.db.characters import CharacterDB
@@ -18,18 +18,18 @@ class Model:
         self.players: PlayerDB
         self.characters: CharacterDB
 
-        self.command_ids: dict[str, Snowflake] = {}
+        self.command_ids: dict[str, hikari.Snowflake] = {}
 
-    async def start(self, app: RESTAware) -> None:
+    async def start(self, client: hikari.api.RESTClient) -> None:
         self.db_pool = await connect(self.config.db_url)
         self.systems = SystemDB(self.db_pool)
         self.games = GameDB(self.db_pool)
         self.players = PlayerDB(self.db_pool)
         self.characters = CharacterDB(self.db_pool)
 
-        application = await app.rest.fetch_application()
-        commands = await app.rest.fetch_application_commands(application.id)
-        self.command_ids = {c.name: c.id for c in commands if isinstance(c, SlashCommand)}
+        application = await client.fetch_application()
+        commands = await client.fetch_application_commands(application.id)
+        self.command_ids = {c.name: c.id for c in commands if isinstance(c, hikari.SlashCommand)}
 
     def mention_command(self, name: str) -> str:
         return f"</{name}:{self.command_ids.get(name.split()[0], None)}>"
