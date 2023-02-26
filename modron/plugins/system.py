@@ -53,7 +53,9 @@ async def info_view(system_id: int, guild_id: int) -> Response:
 
     return {
         "content": None,
-        "embeds": [await system.embed()],
+        "embeds": await asyncio.gather(
+            system.embed(description=True),
+        ),
         "components": [],
     }
 
@@ -62,7 +64,7 @@ async def settings_view(system: SystemLite) -> Response:
     return {
         "content": None,
         "embeds": await asyncio.gather(
-            system.embed(),
+            system.embed(description=True),
         ),
         "components": await asyncio.gather(
             flare.Row(
