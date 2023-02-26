@@ -662,7 +662,6 @@ class GameCreate:
     system = crescent.option(
         str,
         "The system this game will be using",
-        # TODO: can't use model in definitions like this
         autocomplete=lambda ctx, option: plugin.model.systems.autocomplete(ctx, option),
     )
 
