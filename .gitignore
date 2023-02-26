@@ -15,5 +15,3 @@ poetry.lock
 
 # build
 dist
-
-dev
