@@ -106,7 +106,6 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
 system_name_text_input = flare.TextInput(
     label="Name",
     style=hikari.TextInputStyle.SHORT,
-    min_length=1,
     max_length=30,
     required=True,
 )
@@ -115,16 +114,16 @@ system_author_text_input = flare.TextInput(
     label="Author Label",
     placeholder="Author",
     style=hikari.TextInputStyle.SHORT,
-    min_length=1,
     max_length=30,
+    required=False,
 )
 
 system_player_text_input = flare.TextInput(
     label="Player Label",
     placeholder="Player",
     style=hikari.TextInputStyle.SHORT,
-    min_length=1,
     max_length=30,
+    required=False,
 )
 
 system_description_text_input = flare.TextInput(
@@ -246,7 +245,6 @@ class SystemDeleteModal(flare.Modal, title="System Delete Confirmation"):
         label='Please confirm by typing "CONFIRM" in caps',
         placeholder="This can not be undone",
         style=hikari.TextInputStyle.SHORT,
-        min_length=1,
         required=True,
     )
 

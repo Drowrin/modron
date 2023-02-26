@@ -407,7 +407,6 @@ game_name_text_input = flare.TextInput(
     label="Title",
     placeholder="The full title of the game",
     style=hikari.TextInputStyle.SHORT,
-    min_length=1,
     max_length=50,
     required=True,
 )
@@ -631,7 +630,6 @@ class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
         label='Please confirm by typing "CONFIRM" in caps',
         placeholder="This can not be undone",
         style=hikari.TextInputStyle.SHORT,
-        min_length=1,
         required=True,
     )
 
