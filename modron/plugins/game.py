@@ -48,7 +48,7 @@ def only_owner(f: SignatureT[OwnerAwareT]):
 async def info_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(description=True)],
+        "embeds": [await game.embed(description=True, guild_resources=True)],
         "components": [],
     }
 
