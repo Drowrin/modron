@@ -61,6 +61,7 @@ async def settings_view(game: Game) -> Response:
             flare.Row(
                 ManageChannelsButton.make(game.game_id, game.author_id),
                 EditStatusButton.make(game.game_id, game.author_id),
+                RoleButton.make(game.game_id, game.author_id, game.role_id),
                 ToggleSeekingPlayers.make(game.game_id, game.author_id, game.seeking_players),
                 AddUsersButton.make(game.game_id, game.author_id),
             ),
@@ -366,6 +367,40 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
         )
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
+        await ctx.edit_response(**await settings_view(game))
+
+
+class RoleButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
+    game_id: int
+    author_id: int
+    role_id: int | None
+    
+    @classmethod
+    def make(cls, game_id: int, author_id: int, role_id: int | None) -> typing.Self:
+        return cls(game_id, author_id, role_id).set_label(
+            "Unlink Role" if role_id is not None else "Create Role"
+        )
+    
+    @only_author
+    async def callback(self, ctx: flare.MessageContext):
+        assert ctx.guild_id is not None
+        
+        if self.role_id is None:
+            game_lite = await plugin.model.games.get_lite(game_id=self.game_id, guild_id=ctx.guild_id)
+            role = await game_lite.create_role()
+            role_id = role.id
+        else:
+            role_id = None
+        
+        await plugin.model.games.update(
+            game_id=self.game_id,
+            guild_id=ctx.guild_id,
+            author_id=self.author_id,
+            role_id=role_id,
+        )
+        
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+        
         await ctx.edit_response(**await settings_view(game))
 
 
