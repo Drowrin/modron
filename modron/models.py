@@ -228,9 +228,7 @@ class GameLite:
 
     def category_overwrites(self) -> list[hikari.PermissionOverwrite]:
         perms = (
-            hikari.Permissions.MANAGE_CHANNELS
-            | hikari.Permissions.SEND_MESSAGES
-            | hikari.Permissions.MANAGE_MESSAGES
+            hikari.Permissions.MANAGE_CHANNELS | hikari.Permissions.SEND_MESSAGES | hikari.Permissions.MANAGE_MESSAGES
         )
         return [
             hikari.PermissionOverwrite(

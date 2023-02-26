@@ -30,7 +30,7 @@ class Model:
 
         application = await client.fetch_application()
         self.app_id = application.id
-        
+
         commands = await client.fetch_application_commands(application.id)
         self.command_ids = {c.name: c.id for c in commands if isinstance(c, hikari.SlashCommand)}
 
