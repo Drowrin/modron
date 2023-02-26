@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 import typing
 from datetime import datetime
@@ -223,6 +224,126 @@ class GameLite:
 
         return hikari.Embed(title=self.author_label).set_author(
             name=member.display_name, icon=member.display_avatar_url
+        )
+
+    def category_overwrites(self) -> list[hikari.PermissionOverwrite]:
+        return [
+            hikari.PermissionOverwrite(
+                id=self.author_id,
+                type=hikari.PermissionOverwriteType.MEMBER,
+                allow=(
+                    hikari.Permissions.MANAGE_CHANNELS
+                    | hikari.Permissions.SEND_MESSAGES
+                    | hikari.Permissions.MANAGE_MESSAGES
+                ),
+            )
+        ]
+
+    def read_only_overwrites(self):
+        return [
+            hikari.PermissionOverwrite(
+                id=self.guild_id,  # @everyone
+                type=hikari.PermissionOverwriteType.ROLE,
+                deny=(
+                    hikari.Permissions.SEND_MESSAGES
+                    | hikari.Permissions.CREATE_PUBLIC_THREADS
+                    | hikari.Permissions.CREATE_PRIVATE_THREADS
+                    | hikari.Permissions.ADD_REACTIONS
+                ),
+            ),
+        ]
+
+    def voice_overwrites(
+        self, role_id: hikari.UndefinedOr[hikari.Snowflake] = hikari.UNDEFINED
+    ) -> list[hikari.PermissionOverwrite]:
+        if role_id is hikari.UNDEFINED:
+            return []
+
+        return [
+            hikari.PermissionOverwrite(
+                id=self.guild_id,  # @everyone
+                type=hikari.PermissionOverwriteType.ROLE,
+                deny=hikari.Permissions.CONNECT,
+            ),
+            hikari.PermissionOverwrite(
+                id=role_id,
+                type=hikari.PermissionOverwriteType.ROLE,
+                allow=hikari.Permissions.CONNECT,
+            ),
+        ]
+
+    async def create_role(self) -> hikari.Role:
+        role = await plugin.app.rest.create_role(
+            self.guild_id,
+            name=self.abbreviation,
+            mentionable=True,
+        )
+        await plugin.app.rest.add_role_to_member(
+            self.guild_id,
+            self.author_id,
+            role.id,
+        )
+        return role
+
+    async def create_channel_category(self) -> hikari.GuildCategory:
+        return await plugin.app.rest.create_guild_category(
+            self.guild_id,
+            self.abbreviation,
+            permission_overwrites=self.category_overwrites(),
+        )
+
+    async def create_channel(
+        self, name: str, category_id: hikari.UndefinedOr[hikari.Snowflake] = hikari.UNDEFINED
+    ) -> hikari.GuildTextChannel:
+        return await plugin.app.rest.create_guild_text_channel(
+            self.guild_id,
+            name=name,
+            category=category_id,
+        )
+
+    async def create_read_only_channel(
+        self, name: str, category_id: hikari.UndefinedOr[hikari.Snowflake] = hikari.UNDEFINED
+    ) -> hikari.GuildTextChannel:
+        return await plugin.app.rest.create_guild_text_channel(
+            self.guild_id, name=name, category=category_id, permission_overwrites=self.read_only_overwrites()
+        )
+
+    async def create_voice_channel(
+        self,
+        name: str,
+        role_id: hikari.UndefinedOr[hikari.Snowflake] = hikari.UNDEFINED,
+        category_id: hikari.UndefinedOr[hikari.Snowflake] = hikari.UNDEFINED,
+    ) -> hikari.GuildVoiceChannel:
+        return await plugin.app.rest.create_guild_voice_channel(
+            self.guild_id,
+            name=name,
+            category=category_id,
+            permission_overwrites=self.voice_overwrites(role_id),
+        )
+
+    async def full_setup(self) -> None:
+        category, role = await asyncio.gather(
+            self.create_channel_category(),
+            self.create_role(),
+        )
+
+        main, info, synopsis, voice = await asyncio.gather(
+            self.create_channel("main", category.id),
+            self.create_read_only_channel("info", category.id),
+            self.create_read_only_channel("synopsis", category.id),
+            self.create_voice_channel("Voice", role.id, category.id),
+        )
+
+        await plugin.model.games.update(
+            game_id=self.game_id,
+            guild_id=self.guild_id,
+            author_id=self.author_id,
+            role_id=role.id,
+            category_channel_id=category.id,
+            main_channel_id=main.id,
+            info_channel_id=info.id,
+            synopsis_channel_id=synopsis.id,
+            voice_channel_id=voice.id,
         )
 
 
