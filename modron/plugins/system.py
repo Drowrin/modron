@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import typing
 
 import crescent
@@ -11,15 +12,14 @@ import toolbox.members
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotUniqueError
 from modron.models import Response, SystemLite
 
-MANAGE_SYSTEM_PERMISSIONS = hikari.Permissions.ADMINISTRATOR
-
-
 if typing.TYPE_CHECKING:
     from modron.model import Model
 
     Plugin = crescent.Plugin[hikari.GatewayBot, Model]
 else:
     Plugin = crescent.Plugin[hikari.GatewayBot, None]
+
+MANAGE_SYSTEM_PERMISSIONS = hikari.Permissions.ADMINISTRATOR
 
 plugin = Plugin()
 system = crescent.Group(
@@ -29,10 +29,22 @@ system = crescent.Group(
     default_member_permissions=MANAGE_SYSTEM_PERMISSIONS,
 )
 
+SignatureT = typing.Callable[[typing.Any, flare.MessageContext], typing.Coroutine[typing.Any, typing.Any, None]]
 
-def has_system_permissions(member: hikari.Member) -> bool:
-    permissions = toolbox.members.calculate_permissions(member)
-    return (permissions & MANAGE_SYSTEM_PERMISSIONS) == MANAGE_SYSTEM_PERMISSIONS
+
+def require_permissions(f: SignatureT):
+    @functools.wraps(f)
+    async def inner(self: typing.Any, ctx: flare.MessageContext) -> None:
+        assert ctx.member is not None
+
+        permissions = toolbox.members.calculate_permissions(ctx.member)
+
+        if (permissions & MANAGE_SYSTEM_PERMISSIONS) != MANAGE_SYSTEM_PERMISSIONS:
+            raise EditPermissionError("System")
+
+        return await f(self, ctx)
+
+    return inner
 
 
 async def info_view(system_id: int, guild_id: int) -> Response:
@@ -67,12 +79,9 @@ class EditButton(flare.Button, label="Edit Details"):
     def make(cls, system_id: int) -> typing.Self:
         return cls(system_id)
 
+    @require_permissions
     async def callback(self, ctx: flare.MessageContext) -> None:
-        assert ctx.member is not None
         assert ctx.guild_id is not None
-
-        if not has_system_permissions(ctx.member):
-            raise EditPermissionError("System")
 
         system = await plugin.model.systems.get_lite(self.system_id, ctx.guild_id)
 
@@ -86,12 +95,8 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
     def make(cls, system_id: int) -> typing.Self:
         return cls(system_id)
 
+    @require_permissions
     async def callback(self, ctx: flare.MessageContext) -> None:
-        assert ctx.member is not None
-
-        if not has_system_permissions(ctx.member):
-            raise EditPermissionError("System")
-
         await SystemDeleteModal.make(self.system_id).send(ctx.interaction)
 
 

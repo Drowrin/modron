@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import typing
 
 import crescent
@@ -8,7 +9,7 @@ import flare
 import hikari
 
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
-from modron.models import Game, GameStatus, Response
+from modron.models import Game, GameLite, GameStatus, Response
 
 if typing.TYPE_CHECKING:
     from modron.model import Model
@@ -23,6 +24,24 @@ game = crescent.Group(
     "game management",
     dm_enabled=False,
 )
+
+
+class OwnerAware(typing.Protocol):
+    owner_id: int
+
+
+OwnerAwareT = typing.TypeVar("OwnerAwareT", bound=OwnerAware)
+SignatureT = typing.Callable[[OwnerAwareT, flare.MessageContext], typing.Coroutine[typing.Any, typing.Any, None]]
+
+
+def only_owner(f: SignatureT[OwnerAwareT]):
+    @functools.wraps(f)
+    async def inner(self: OwnerAwareT, ctx: flare.MessageContext) -> None:
+        if ctx.user.id != self.owner_id:
+            raise EditPermissionError("Game")
+        return await f(self, ctx)
+
+    return inner
 
 
 async def info_view(game: Game) -> Response:
@@ -134,11 +153,10 @@ class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
             ),
         )
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
@@ -164,10 +182,8 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
                 instance.set_channel_types(hikari.ChannelType.GUILD_CATEGORY)
         return instance
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
 
         await ctx.defer()
@@ -197,10 +213,8 @@ class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Sel
     ) -> typing.Self:
         return cls(game_id, owner_id)
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
 
         await ctx.defer()
@@ -233,10 +247,8 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
             ]
         )
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
 
         await plugin.model.games.update(
@@ -260,11 +272,10 @@ class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     def make(cls, game_id: int, owner_id: int) -> typing.Self:
         return cls(game_id, owner_id).set_label("Manage Channels")
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
@@ -280,11 +291,10 @@ class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle
     def make(cls, game_id: int, owner_id: int) -> typing.Self:
         return cls(game_id, owner_id)
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
@@ -300,11 +310,10 @@ class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonS
     def make(cls, game_id: int, owner_id: int) -> typing.Self:
         return cls(game_id, owner_id)
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
@@ -320,11 +329,10 @@ class BackButton(flare.Button, label="Back"):
     def make(cls, game_id: int, owner_id: int) -> typing.Self:
         return cls(game_id, owner_id)
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await ctx.edit_response(
@@ -343,11 +351,10 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
             "Stop Seeking Players" if seeking_players else "Start Seeking Players"
         )
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext):
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         await plugin.model.games.update(
             self.game_id,
             ctx.guild_id,
@@ -367,16 +374,13 @@ class EditButton(flare.Button, label="Edit Details"):
     def make(cls, game_id: int, owner_id: int) -> typing.Self:
         return cls(game_id, owner_id)
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         game = await plugin.model.games.get_lite(self.game_id, ctx.guild_id)
 
-        await GameEditModal.make(game.game_id, game.name, game.abbreviation, game.description, game.image).send(
-            ctx.interaction
-        )
+        await GameEditModal.make(game).send(ctx.interaction)
 
 
 class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER):
@@ -387,11 +391,10 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
     def make(cls, game_id: int, owner_id: int) -> typing.Self:
         return cls(game_id, owner_id)
 
+    @only_owner
     async def callback(self, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.owner_id:
-            raise EditPermissionError("Game")
-
         assert ctx.guild_id is not None
+
         game = await plugin.model.games.get(self.game_id, ctx.guild_id)
 
         await GameDeleteModal.make(game.game_id).send(ctx.interaction)
@@ -587,19 +590,12 @@ class GameEditModal(flare.Modal, title="Edit Game"):
     image: flare.TextInput = game_image_text_input
 
     @classmethod
-    def make(
-        cls,
-        game_id: int,
-        name: str,
-        abbreviation: str | None = None,
-        description: str | None = None,
-        image: str | None = None,
-    ) -> typing.Self:
-        instance = cls(game_id)
-        instance.name.set_value(name)
-        instance.abbreviation.set_value(abbreviation)
-        instance.description.set_value(description)
-        instance.image.set_value(image)
+    def make(cls, game: GameLite) -> typing.Self:
+        instance = cls(game.game_id)
+        instance.name.set_value(game.name)
+        instance.abbreviation.set_value(game.abbreviation)
+        instance.description.set_value(game.description)
+        instance.image.set_value(game.image)
 
         return instance
 
