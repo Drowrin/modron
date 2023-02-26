@@ -182,7 +182,7 @@ class GameLite:
             .set_thumbnail(self.image)
         )
 
-        if abbreviation:
+        if abbreviation and self.abbreviation != self.name:
             embed.description = f"Abbreviated as `{self.abbreviation}`"
 
         if (system_name := self.system_name) is not None:
