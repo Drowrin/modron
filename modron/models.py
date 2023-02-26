@@ -33,7 +33,7 @@ async def get_member(guild_id: int, user_id: int) -> hikari.Member:
 class SystemLite:
     system_id: int
 
-    guild_id: int
+    guild_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
 
     name: str
     description: str | None = None
@@ -106,6 +106,12 @@ def system_converter(rs: list[dict[str, typing.Any]] | SystemLite | None):
     return next((SystemLite(**r) for r in rs), None)
 
 
+def snowflake_or_none_converter(value: int | None) -> hikari.Snowflake | None:
+    if value is None:
+        return None
+    return hikari.Snowflake(value)
+
+
 @attrs.define(kw_only=True)
 class GameLite:
     game_id: int
@@ -113,8 +119,8 @@ class GameLite:
     system_id: int | None = None
     system: SystemLite | None = attrs.field(converter=system_converter, default=None)
 
-    guild_id: int
-    author_id: int
+    guild_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
+    author_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
 
     name: str
     abbreviation: str = attrs.field()
@@ -126,13 +132,13 @@ class GameLite:
 
     created_at: datetime
 
-    role_id: int | None = None
+    role_id: hikari.Snowflake | None = attrs.field(converter=snowflake_or_none_converter)
 
-    category_channel_id: int | None = None
-    main_channel_id: int | None = None
-    info_channel_id: int | None = None
-    synopsis_channel_id: int | None = None
-    voice_channel_id: int | None = None
+    category_channel_id: int | None = attrs.field(converter=snowflake_or_none_converter)
+    main_channel_id: int | None = attrs.field(converter=snowflake_or_none_converter)
+    info_channel_id: int | None = attrs.field(converter=snowflake_or_none_converter)
+    synopsis_channel_id: int | None = attrs.field(converter=snowflake_or_none_converter)
+    voice_channel_id: int | None = attrs.field(converter=snowflake_or_none_converter)
 
     @abbreviation.default  # type: ignore
     def _default_abbreviation(self) -> str:
@@ -251,7 +257,7 @@ class Game(GameLite):
 class Character:
     character_id: int
     game_id: int
-    author_id: int
+    author_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
 
     name: str
 
@@ -284,7 +290,7 @@ class Character:
 
 @attrs.define(kw_only=True)
 class Player:
-    user_id: int
+    user_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
     game_id: int
 
     character_id: int | None = None
