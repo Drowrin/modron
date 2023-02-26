@@ -118,37 +118,48 @@ class GameDB(DBConn):
         game_id: int,
         guild_id: int,
         author_id: int,
-        name: str | None = None,
-        abbreviation: str | None = None,
-        description: str | None = None,
-        image: str | None = None,
-        status: str | None = None,
-        seeking_players: bool | None = None,
-        category_channel_id: int | None = None,
-        main_channel_id: int | None = None,
-        info_channel_id: int | None = None,
-        synopsis_channel_id: int | None = None,
-        voice_channel_id: int | None = None,
-        role_id: int | None = None,
+        name: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        abbreviation: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        description: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        image: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        status: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        seeking_players: hikari.UndefinedNoneOr[bool] = hikari.UNDEFINED,
+        category_channel_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
+        main_channel_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
+        info_channel_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
+        synopsis_channel_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
+        voice_channel_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
+        role_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
     ):
-        # TODO: since the connection is being reset every time, this isn't being cached
-        # it would be better to dynamically construct the columns to update
+        kwargs = {
+            k: v
+            for k, v in 
+            {
+                "name": name,
+                "abbreviation": abbreviation,
+                "description": description,
+                "image": image,
+                "status": status,
+                "seeking_players": seeking_players,
+                "category_channel_id": category_channel_id,
+                "main_channel_id": main_channel_id,
+                "info_channel_id": info_channel_id,
+                "synopsis_channel_id": synopsis_channel_id,
+                "voice_channel_id": voice_channel_id,
+                "role_id": role_id,
+            }.items()
+            if v is not hikari.UNDEFINED
+        }
+        args = kwargs.values()
+        columns = ",\n".join([
+            f"{k} = ${i + 4}"
+            for i, k in enumerate(kwargs.keys())
+        ])
         await conn.execute(
-            """
+            f"""
             UPDATE Games
             SET
-                name = COALESCE($4, name),
-                abbreviation = COALESCE($5, abbreviation),
-                description = COALESCE($6, description),
-                image = COALESCE($7, image),
-                status = COALESCE($8, status),
-                seeking_players = COALESCE($9, seeking_players),
-                category_channel_id = COALESCE($10, category_channel_id),
-                main_channel_id = COALESCE($11, main_channel_id),
-                info_channel_id = COALESCE($12, info_channel_id),
-                synopsis_channel_id = COALESCE($13, synopsis_channel_id),
-                voice_channel_id = COALESCE($14, voice_channel_id),
-                role_id = COALESCE($15, role_id)
+                {columns}
             WHERE
                 game_id = $1
                 AND guild_id = $2
@@ -157,18 +168,7 @@ class GameDB(DBConn):
             game_id,
             guild_id,
             author_id,
-            name,
-            abbreviation,
-            description,
-            image,
-            status,
-            seeking_players,
-            category_channel_id,
-            main_channel_id,
-            info_channel_id,
-            synopsis_channel_id,
-            voice_channel_id,
-            role_id,
+            *args
         )
 
     @with_conn
