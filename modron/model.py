@@ -1,4 +1,4 @@
-from hikari import GatewayBot, SlashCommand, Snowflake
+from hikari import RESTAware, SlashCommand, Snowflake
 
 from modron.config import Config
 from modron.db.characters import CharacterDB
@@ -20,7 +20,7 @@ class Model:
 
         self.command_ids: dict[str, Snowflake] = {}
 
-    async def start(self, app: GatewayBot) -> None:
+    async def start(self, app: RESTAware) -> None:
         self.db_pool = await connect(self.config.db_url)
         self.systems = SystemDB(self.db_pool)
         self.games = GameDB(self.db_pool)
