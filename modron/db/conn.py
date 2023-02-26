@@ -28,10 +28,6 @@ async def connect(url: str) -> Pool:
     if pool is None:
         raise RuntimeError("Could not create asyncpg connection pool")
 
-    async with pool.acquire() as conn:
-        with open("modron/db/schema.sql") as f:
-            await conn.execute(f.read())
-
     return pool
 
 
