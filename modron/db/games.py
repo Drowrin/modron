@@ -133,8 +133,7 @@ class GameDB(DBConn):
     ):
         kwargs = {
             k: v
-            for k, v in 
-            {
+            for k, v in {
                 "name": name,
                 "abbreviation": abbreviation,
                 "description": description,
@@ -151,10 +150,7 @@ class GameDB(DBConn):
             if v is not hikari.UNDEFINED
         }
         args = kwargs.values()
-        columns = ",\n".join([
-            f"{k} = ${i + 4}"
-            for i, k in enumerate(kwargs.keys())
-        ])
+        columns = ",\n".join([f"{k} = ${i + 4}" for i, k in enumerate(kwargs.keys())])
         await conn.execute(
             f"""
             UPDATE Games
@@ -168,7 +164,7 @@ class GameDB(DBConn):
             game_id,
             guild_id,
             author_id,
-            *args
+            *args,
         )
 
     @with_conn
