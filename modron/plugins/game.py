@@ -656,6 +656,7 @@ class GameCreate:
     title = crescent.option(
         str,
         "The title of the game being created",
+        max_length=50,
     )
 
     system = crescent.option(
