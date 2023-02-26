@@ -56,7 +56,7 @@ async def info_view(game: Game) -> Response:
 async def settings_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(description=True, channels=True, players=True)],
+        "embeds": [await game.embed(abbreviation=True, description=True, guild_resources=True, players=True)],
         "components": await asyncio.gather(
             flare.Row(
                 ManageChannelsButton.make(game.game_id, game.owner_id),
@@ -86,7 +86,7 @@ async def status_settings_view(game: Game) -> Response:
 async def channel_settings_view(game: Game, kind: ChannelKind) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(channels=True)],
+        "embeds": [await game.embed(guild_resources=True)],
         "components": await asyncio.gather(
             flare.Row(ChannelKindSelect.make(game.game_id, game.owner_id, kind)),
             flare.Row(GameChannelSelect.make(game.game_id, game.owner_id, kind)),

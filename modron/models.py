@@ -158,20 +158,35 @@ class GameLite:
             return "Player"
         return self.system.player_label
 
-    async def embed(self, *, description: bool = False, channels: bool = False) -> hikari.Embed:
+    @property
+    def has_any_guild_resources(self) -> bool:
+        return any(
+            c is not None
+            for c in [
+                self.main_channel_id,
+                self.info_channel_id,
+                self.synopsis_channel_id,
+                self.voice_channel_id,
+                self.category_channel_id,
+                self.role_id,
+            ]
+        )
+
+    async def embed(
+        self, *, abbreviation: bool = False, description: bool = False, guild_resources: bool = False
+    ) -> hikari.Embed:
         embed = (
             hikari.Embed(
                 title=self.name,
                 timestamp=self.created_at,
                 color=self.status.color,
-                description=f"Abbreviated as `{self.abbreviation}`",
             )
             .set_footer("Created")
             .set_thumbnail(self.image)
         )
 
-        if self.category_channel_id is not None:
-            embed.description = f"{embed.description}\nChannel Category: <#{self.category_channel_id}>"
+        if abbreviation:
+            embed.description = f"Abbreviated as `{self.abbreviation}`"
 
         if (system_name := self.system_name) is not None:
             embed.add_field("System", system_name, inline=True)
@@ -186,18 +201,29 @@ class GameLite:
         if description and self.description is not None:
             embed.add_field("Description", self.description)
 
-        if channels:
+        if guild_resources and self.has_any_guild_resources:
+            embed.add_field(
+                "Connected Guild Resources",
+                "These channels, categories, and roles are used by multiple bot features",
+            )
+
             if self.main_channel_id is not None:
-                embed.add_field("Main Channel", f"<#{self.main_channel_id}>", inline=True)
+                embed.add_field("Main", f"<#{self.main_channel_id}>", inline=True)
 
             if self.info_channel_id is not None:
-                embed.add_field("Info Channel", f"<#{self.info_channel_id}>", inline=True)
+                embed.add_field("Info", f"<#{self.info_channel_id}>", inline=True)
 
             if self.synopsis_channel_id is not None:
-                embed.add_field("Synopsis Channel", f"<#{self.synopsis_channel_id}>", inline=True)
+                embed.add_field("Synopsis", f"<#{self.synopsis_channel_id}>", inline=True)
 
             if self.voice_channel_id is not None:
-                embed.add_field("Voice Channel", f"<#{self.voice_channel_id}>", inline=True)
+                embed.add_field("Voice", f"<#{self.voice_channel_id}>", inline=True)
+
+            if self.category_channel_id is not None:
+                embed.add_field("Category", f"<#{self.category_channel_id}>", inline=True)
+
+            if self.role_id is not None:
+                embed.add_field("Role", f"<@&{self.role_id}>", inline=True)
 
         return embed
 
@@ -220,15 +246,18 @@ class Game(GameLite):
     def get_player_for(self, character: Character) -> Player | None:
         return next((p for p in self.players if p.character_id == character.character_id), None)
 
-    async def embed(self, *, description: bool = False, channels: bool = False, players: bool = False) -> hikari.Embed:
-        embed = await super().embed(description=description, channels=channels)
+    async def embed(
+        self,
+        *,
+        abbreviation: bool = False,
+        description: bool = False,
+        guild_resources: bool = False,
+        players: bool = False,
+    ) -> hikari.Embed:
+        embed = await super().embed(abbreviation=abbreviation, description=description, guild_resources=guild_resources)
 
-        if players:
-            for player in self.players:
-                field = f"<@{player.user_id}>"
-                if (character := self.get_character_for(player)) is not None:
-                    field += f"\n{character.name}"
-                embed.add_field(self.player_label, field, inline=True)
+        if players and len(self.players) > 0:
+            embed.add_field("Players", " ".join(f"<@{p.user_id}>" for p in self.players))
 
         return embed
 
