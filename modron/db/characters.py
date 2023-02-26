@@ -4,7 +4,7 @@ from modron.models import Character
 
 class CharacterDB(DBConn):
     @with_conn
-    async def count(self, conn: Conn, game_id: int) -> int:
+    async def count(self, conn: Conn, *, game_id: int) -> int:
         val = await conn.fetchval(
             """
             SELECT COUNT(character_id)
@@ -23,6 +23,7 @@ class CharacterDB(DBConn):
     async def insert(
         self,
         conn: Conn,
+        *,
         game_id: int,
         author_id: int,
         name: str,

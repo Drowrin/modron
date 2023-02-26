@@ -11,6 +11,7 @@ class SystemDB(DBConn):
     async def insert(
         self,
         conn: Conn,
+        *,
         guild_id: int,
         name: str,
         author_label: str | None = None,
@@ -34,7 +35,7 @@ class SystemDB(DBConn):
 
     @with_conn
     @convert(SystemLite)
-    async def get_lite(self, conn: Conn, system_id: int, guild_id: int):
+    async def get_lite(self, conn: Conn, *, system_id: int, guild_id: int):
         return await conn.fetchrow(
             """
             SELECT *
@@ -48,7 +49,7 @@ class SystemDB(DBConn):
 
     @with_conn
     @convert(System)
-    async def get(self, conn: Conn, system_id: int, guild_id: int):
+    async def get(self, conn: Conn, *, system_id: int, guild_id: int):
         return await conn.fetchrow(
             """
             SELECT
@@ -67,7 +68,7 @@ class SystemDB(DBConn):
         )
 
     @with_conn
-    async def name_exists(self, conn: Conn, guild_id: int, name: str) -> bool:
+    async def name_exists(self, conn: Conn, *, guild_id: int, name: str) -> bool:
         return await conn.fetchval(
             """
             SELECT EXISTS(
@@ -83,7 +84,7 @@ class SystemDB(DBConn):
         )
 
     @with_conn
-    async def id_exists(self, conn: Conn, guild_id: int, system_id: int) -> bool:
+    async def id_exists(self, conn: Conn, *, guild_id: int, system_id: int) -> bool:
         return await conn.fetchval(
             """
             SELECT EXISTS(
@@ -102,6 +103,7 @@ class SystemDB(DBConn):
     async def update(
         self,
         conn: Conn,
+        *,
         system_id: int,
         guild_id: int,
         name: str | None = None,
@@ -133,7 +135,7 @@ class SystemDB(DBConn):
         )
 
     @with_conn
-    async def delete(self, conn: Conn, system_id: int) -> None:
+    async def delete(self, conn: Conn, *, system_id: int) -> None:
         await conn.execute(
             """
             DELETE

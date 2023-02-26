@@ -4,7 +4,7 @@ from modron.models import Player
 
 class PlayerDB(DBConn):
     @with_conn
-    async def count(self, conn: Conn, game_id: int) -> int:
+    async def count(self, conn: Conn, *, game_id: int) -> int:
         val = await conn.fetchval(
             """
             SELECT COUNT((user_id, game_id))
@@ -19,7 +19,7 @@ class PlayerDB(DBConn):
         return val
 
     @with_conn
-    async def insert(self, conn: Conn, user_id: int, game_id: int):
+    async def insert(self, conn: Conn, *, user_id: int, game_id: int):
         await conn.execute(
             """
             INSERT INTO Players
@@ -34,7 +34,7 @@ class PlayerDB(DBConn):
 
     @with_conn
     @convert(Player)
-    async def get(self, conn: Conn, game_id: int, user_id: int):
+    async def get(self, conn: Conn, *, game_id: int, user_id: int):
         return await conn.fetchrow(
             """
             SELECT *
@@ -48,7 +48,7 @@ class PlayerDB(DBConn):
         )
 
     @with_conn
-    async def update(self, conn: Conn, game_id: int, user_id: int, character_id: int | None = None) -> None:
+    async def update(self, conn: Conn, *, game_id: int, user_id: int, character_id: int | None = None) -> None:
         await conn.execute(
             """
             UPDATE Players
@@ -64,7 +64,7 @@ class PlayerDB(DBConn):
         )
 
     @with_conn
-    async def delete(self, conn: Conn, game_id: int, user_id: int) -> None:
+    async def delete(self, conn: Conn, *, game_id: int, user_id: int) -> None:
         await conn.execute(
             """
             DELETE

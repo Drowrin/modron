@@ -158,7 +158,7 @@ class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await channel_settings_view(game, typing.cast(ChannelKind, ctx.values[0])),
@@ -189,13 +189,13 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
 
         await ctx.defer()
         await plugin.model.games.update(
-            self.game_id,
-            ctx.guild_id,
-            ctx.user.id,
+            game_id=self.game_id,
+            guild_id=ctx.guild_id,
+            author_id=ctx.user.id,
             **{f"{self.kind}_channel_id": next((c.id for c in ctx.channels), None)},
         )
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await channel_settings_view(game, self.kind),
@@ -220,9 +220,11 @@ class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Sel
 
         await ctx.defer()
 
-        await asyncio.gather(*[plugin.model.players.insert(user.id, self.game_id) for user in ctx.users])
+        await asyncio.gather(
+            *[plugin.model.players.insert(user_id=user.id, game_id=self.game_id) for user in ctx.users]
+        )
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await add_users_view(game),
@@ -253,12 +255,12 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
         assert ctx.guild_id is not None
 
         await plugin.model.games.update(
-            self.game_id,
-            ctx.guild_id,
-            ctx.user.id,
+            game_id=self.game_id,
+            guild_id=ctx.guild_id,
+            author_id=ctx.user.id,
             status=ctx.values[0],
         )
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await status_settings_view(game),
@@ -277,7 +279,7 @@ class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await channel_settings_view(game, "main"),
@@ -296,7 +298,7 @@ class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await add_users_view(game),
@@ -315,7 +317,7 @@ class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonS
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await status_settings_view(game),
@@ -334,7 +336,7 @@ class BackButton(flare.Button, label="Back"):
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await settings_view(game),
@@ -357,12 +359,12 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
         assert ctx.guild_id is not None
 
         await plugin.model.games.update(
-            self.game_id,
-            ctx.guild_id,
-            ctx.user.id,
+            game_id=self.game_id,
+            guild_id=ctx.guild_id,
+            author_id=ctx.user.id,
             seeking_players=not self.seeking_players,
         )
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(**await settings_view(game))
 
@@ -379,7 +381,7 @@ class EditButton(flare.Button, label="Edit Details"):
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        game = await plugin.model.games.get_lite(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get_lite(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await GameEditModal.make(game).send(ctx.interaction)
 
@@ -396,7 +398,7 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await GameDeleteModal.make(game.game_id).send(ctx.interaction)
 
@@ -559,9 +561,9 @@ class GameCreateModal(flare.Modal, title="New Game"):
             )
 
             await plugin.model.games.update(
-                game_lite.game_id,
-                ctx.guild_id,
-                ctx.user.id,
+                game_id=game_lite.game_id,
+                guild_id=ctx.guild_id,
+                author_id=ctx.user.id,
                 role_id=role.id,
                 category_channel_id=category.id,
                 main_channel_id=main.id,
@@ -571,8 +573,8 @@ class GameCreateModal(flare.Modal, title="New Game"):
             )
 
         game = await plugin.model.games.get(
-            game_lite.game_id,
-            ctx.guild_id,
+            game_id=game_lite.game_id,
+            guild_id=ctx.guild_id,
         )
 
         await ctx.respond(
@@ -617,7 +619,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
             description=self.description.value or None,
             image=self.image.value or None,
         )
-        game = await plugin.model.games.get(self.game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(**await settings_view(game))
 
@@ -641,7 +643,7 @@ class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
         if self.confirmation.value != "CONFIRM":
             raise ConfirmationError()
 
-        await plugin.model.games.delete(self.game_id)
+        await plugin.model.games.delete(game_id=self.game_id)
         response = await ctx.edit_response("Game successfully deleted!", embeds=[], components=[])
         await asyncio.sleep(5)
         await response.delete()
@@ -677,7 +679,7 @@ class GameCreate:
         except ValueError as err:
             raise AutocompleteSelectError() from err
         else:
-            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
+            if not await plugin.model.systems.id_exists(system_id=system_id, guild_id=ctx.guild_id):
                 raise AutocompleteSelectError()
 
         await GameCreateModal.make(system_id, self.title, self.title[:25], self.auto_setup).send(ctx.interaction)
@@ -701,12 +703,12 @@ class GameSettings:
         except ValueError as err:
             raise AutocompleteSelectError() from err
         else:
-            if not await plugin.model.games.id_exists(ctx.guild_id, game_id):
+            if not await plugin.model.games.id_exists(game_id=game_id, guild_id=ctx.guild_id):
                 raise AutocompleteSelectError()
 
         await ctx.defer(ephemeral=True)
 
-        game = await plugin.model.games.get(game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=game_id, guild_id=ctx.guild_id)
 
         await ctx.respond(
             **await settings_view(game),
@@ -730,11 +732,11 @@ class GameInfo:
         except ValueError as err:
             raise AutocompleteSelectError() from err
         else:
-            if not await plugin.model.games.id_exists(ctx.guild_id, game_id):
+            if not await plugin.model.games.id_exists(game_id=game_id, guild_id=ctx.guild_id):
                 raise AutocompleteSelectError()
 
         await ctx.defer()
 
-        game = await plugin.model.games.get(game_id, ctx.guild_id)
+        game = await plugin.model.games.get(game_id=game_id, guild_id=ctx.guild_id)
 
         await ctx.respond(**await info_view(game))

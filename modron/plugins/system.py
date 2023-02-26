@@ -49,7 +49,7 @@ def require_permissions(f: SignatureT):
 
 
 async def info_view(system_id: int, guild_id: int) -> Response:
-    system = await plugin.model.systems.get_lite(system_id, guild_id)
+    system = await plugin.model.systems.get_lite(system_id=system_id, guild_id=guild_id)
 
     return {
         "content": None,
@@ -86,7 +86,7 @@ class EditButton(flare.Button, label="Edit Details"):
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
 
-        system = await plugin.model.systems.get_lite(self.system_id, ctx.guild_id)
+        system = await plugin.model.systems.get_lite(system_id=self.system_id, guild_id=ctx.guild_id)
 
         await SystemEditModal.make(system).send(ctx.interaction)
 
@@ -231,7 +231,7 @@ class SystemEditModal(flare.Modal, title="Edit System"):
             description=self.description.value or None,
             image=self.image.value or None,
         )
-        system = await plugin.model.systems.get_lite(self.system_id, ctx.guild_id)
+        system = await plugin.model.systems.get_lite(system_id=self.system_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
             **await settings_view(system),
@@ -258,7 +258,7 @@ class SystemDeleteModal(flare.Modal, title="System Delete Confirmation"):
         if self.confirmation.value != "CONFIRM":
             raise ConfirmationError()
 
-        await plugin.model.systems.delete(self.system_id)
+        await plugin.model.systems.delete(system_id=self.system_id)
         response = await ctx.edit_response("System successfully deleted!", embeds=[], components=[])
         await asyncio.sleep(5)
         await response.delete()
@@ -277,7 +277,7 @@ class SystemCreate:
     async def callback(self, ctx: GuildContext) -> None:
         assert ctx.guild_id is not None
 
-        if await plugin.model.systems.name_exists(ctx.guild_id, self.name):
+        if await plugin.model.systems.name_exists(name=self.name, guild_id=ctx.guild_id):
             raise NotUniqueError("System", name=self.name)
 
         await SystemCreateModal.make(name=self.name).send(ctx.interaction)
@@ -301,12 +301,12 @@ class SystemSettings:
         except ValueError as err:
             raise AutocompleteSelectError() from err
         else:
-            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
+            if not await plugin.model.systems.id_exists(system_id=system_id, guild_id=ctx.guild_id):
                 raise AutocompleteSelectError()
 
         await ctx.defer(ephemeral=True)
 
-        system = await plugin.model.systems.get_lite(system_id, ctx.guild_id)
+        system = await plugin.model.systems.get_lite(system_id=system_id, guild_id=ctx.guild_id)
 
         await ctx.respond(
             **await settings_view(system),
@@ -332,7 +332,7 @@ class SystemInfo:
         except ValueError as err:
             raise AutocompleteSelectError() from err
         else:
-            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
+            if not await plugin.model.systems.id_exists(system_id=system_id, guild_id=ctx.guild_id):
                 raise AutocompleteSelectError()
 
         await ctx.defer()
