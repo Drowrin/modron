@@ -53,35 +53,38 @@ async def settings_view(system: SystemLite) -> Response:
         ),
         "components": await asyncio.gather(
             flare.Row(
-                EditButton.make(system),
-                DeleteButton.make(system),
+                EditButton.make(system.system_id),
+                DeleteButton.make(system.system_id),
             ),
         ),
     }
 
 
 class EditButton(flare.Button, label="Edit Details"):
-    system: SystemLite
+    system_id: int
 
     @classmethod
-    def make(cls, system: SystemLite) -> typing.Self:
-        return cls(system)
+    def make(cls, system_id: int) -> typing.Self:
+        return cls(system_id)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.member is not None
+        assert ctx.guild_id is not None
 
         if not has_system_permissions(ctx.member):
             raise EditPermissionError("System")
 
-        await SystemEditModal.make(self.system).send(ctx.interaction)
+        system = await plugin.model.systems.get_lite(self.system_id, ctx.guild_id)
+
+        await SystemEditModal.make(system).send(ctx.interaction)
 
 
 class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER):
-    system: SystemLite
+    system_id: int
 
     @classmethod
-    def make(cls, system: SystemLite) -> typing.Self:
-        return cls(system)
+    def make(cls, system_id: int) -> typing.Self:
+        return cls(system_id)
 
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.member is not None
@@ -89,7 +92,7 @@ class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER
         if not has_system_permissions(ctx.member):
             raise EditPermissionError("System")
 
-        await SystemDeleteModal.make(self.system).send(ctx.interaction)
+        await SystemDeleteModal.make(self.system_id).send(ctx.interaction)
 
 
 system_name_text_input = flare.TextInput(
@@ -240,8 +243,8 @@ class SystemDeleteModal(flare.Modal, title="System Delete Confirmation"):
     )
 
     @classmethod
-    def make(cls, system: SystemLite) -> typing.Self:
-        return cls(system.system_id)
+    def make(cls, system_id: int) -> typing.Self:
+        return cls(system_id)
 
     async def callback(self, ctx: flare.ModalContext) -> None:
         if self.confirmation.value != "CONFIRM":
