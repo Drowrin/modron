@@ -1,8 +1,11 @@
-from crescent import Plugin
 from hikari import GatewayBot, SlashCommand, Snowflake
 
 from modron.config import Config
-from modron.db import CharacterDB, GameDB, PlayerDB, Pool, SystemDB, connect
+from modron.db.characters import CharacterDB
+from modron.db.conn import Pool, connect
+from modron.db.games import GameDB
+from modron.db.players import PlayerDB
+from modron.db.systems import SystemDB
 
 
 class Model:
@@ -33,6 +36,3 @@ class Model:
 
     async def close(self) -> None:
         await self.db_pool.close()
-
-
-ModronPlugin = Plugin[GatewayBot, Model]

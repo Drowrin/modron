@@ -1,5 +1,5 @@
 from modron.db.conn import Conn, DBConn, convert, with_conn
-from modron.db.models import Player
+from modron.models import Player
 
 
 class PlayerDB(DBConn):

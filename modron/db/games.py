@@ -2,7 +2,7 @@ import crescent
 import hikari
 
 from modron.db.conn import Conn, DBConn, convert, with_conn
-from modron.db.models import Game, GameLite
+from modron.models import Game, GameLite
 
 
 class GameDB(DBConn):
@@ -39,11 +39,15 @@ class GameDB(DBConn):
     async def get_lite(self, conn: Conn, game_id: int, guild_id: int):
         return await conn.fetchrow(
             """
-            SELECT *
-            FROM Games
+            SELECT
+                g.*,
+                array_remove(array_agg(s), NULL) AS system
+            FROM Games AS g
+            LEFT JOIN Systems AS s USING (system_id)
             WHERE
                 game_id = $1
-                AND guild_id = $2;
+                AND g.guild_id = $2
+            GROUP BY game_id;
             """,
             game_id,
             guild_id,
@@ -51,7 +55,7 @@ class GameDB(DBConn):
 
     @with_conn
     @convert(Game)
-    async def get(self, conn: Conn, game_id: int, guild_id: int, owner_id: int | None = None):
+    async def get(self, conn: Conn, game_id: int, guild_id: int):
         return await conn.fetchrow(
             """
             SELECT
@@ -66,12 +70,10 @@ class GameDB(DBConn):
             WHERE
                 game_id = $1
                 AND g.guild_id = $2
-                AND ($3::bigint IS NULL OR owner_id = $3::bigint)
             GROUP BY game_id;
             """,
             game_id,
             guild_id,
-            owner_id,
         )
 
     @with_conn
@@ -112,6 +114,7 @@ class GameDB(DBConn):
         conn: Conn,
         game_id: int,
         guild_id: int,
+        owner_id: int,
         name: str | None = None,
         abbreviation: str | None = None,
         description: str | None = None,
@@ -125,28 +128,32 @@ class GameDB(DBConn):
         voice_channel_id: int | None = None,
         role_id: int | None = None,
     ):
+        # TODO: since the connection is being reset every time, this isn't being cached
+        # it would be better to dynamically construct the columns to update
         await conn.execute(
             """
             UPDATE Games
             SET
-                name = COALESCE($3, name),
-                abbreviation = COALESCE($4, abbreviation),
-                description = COALESCE($5, description),
-                image = COALESCE($6, image),
-                status = COALESCE($7, status),
-                seeking_players = COALESCE($8, seeking_players),
-                category_channel_id = COALESCE($9, category_channel_id),
-                main_channel_id = COALESCE($10, main_channel_id),
-                info_channel_id = COALESCE($11, info_channel_id),
-                synopsis_channel_id = COALESCE($12, synopsis_channel_id),
-                voice_channel_id = COALESCE($13, voice_channel_id),
-                role_id = COALESCE($14, role_id)
+                name = COALESCE($4, name),
+                abbreviation = COALESCE($5, abbreviation),
+                description = COALESCE($6, description),
+                image = COALESCE($7, image),
+                status = COALESCE($8, status),
+                seeking_players = COALESCE($9, seeking_players),
+                category_channel_id = COALESCE($10, category_channel_id),
+                main_channel_id = COALESCE($11, main_channel_id),
+                info_channel_id = COALESCE($12, info_channel_id),
+                synopsis_channel_id = COALESCE($13, synopsis_channel_id),
+                voice_channel_id = COALESCE($14, voice_channel_id),
+                role_id = COALESCE($15, role_id)
             WHERE
                 game_id = $1
-                AND guild_id = $2;
+                AND guild_id = $2
+                AND owner_id = $3;
             """,
             game_id,
             guild_id,
+            owner_id,
             name,
             abbreviation,
             description,

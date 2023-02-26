@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import itertools
 import typing
 
 import crescent
@@ -9,14 +8,20 @@ import flare
 import hikari
 import toolbox.members
 
-from modron.db import System, SystemLite
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotUniqueError
-from modron.model import ModronPlugin
+from modron.models import Response, SystemLite
 
 MANAGE_SYSTEM_PERMISSIONS = hikari.Permissions.ADMINISTRATOR
 
 
-plugin = ModronPlugin()
+if typing.TYPE_CHECKING:
+    from modron.model import Model
+
+    Plugin = crescent.Plugin[hikari.GatewayBot, Model]
+else:
+    Plugin = crescent.Plugin[hikari.GatewayBot, None]
+
+plugin = Plugin()
 system = crescent.Group(
     "system",
     "system management",
@@ -25,81 +30,34 @@ system = crescent.Group(
 )
 
 
-class SystemConverter(flare.Converter[System]):
-    async def to_str(self, obj: System) -> str:
-        return f"{obj.guild_id}:{obj.system_id}"
-
-    async def from_str(self, obj: str) -> System:
-        guild_id, system_id = obj.split(":")
-        return await plugin.model.systems.get(int(system_id), int(guild_id))
-
-
-class SystemLiteConverter(flare.Converter[SystemLite]):
-    async def to_str(self, obj: SystemLite) -> str:
-        return f"{obj.guild_id}:{obj.system_id}"
-
-    async def from_str(self, obj: str) -> SystemLite:
-        guild_id, system_id = obj.split(":")
-        return await plugin.model.systems.get_lite(int(system_id), int(guild_id))
-
-
-flare.add_converter(System, SystemConverter)
-flare.add_converter(SystemLite, SystemLiteConverter)
-
-
 def has_system_permissions(member: hikari.Member) -> bool:
     permissions = toolbox.members.calculate_permissions(member)
     return (permissions & MANAGE_SYSTEM_PERMISSIONS) == MANAGE_SYSTEM_PERMISSIONS
 
 
-async def system_display_lite(system: SystemLite) -> typing.Sequence[hikari.Embed]:
-    embed = (
-        hikari.Embed(
-            title=system.name,
-        )
-        .set_thumbnail(system.image)
-        .add_field("Author Label", system.author_label, inline=True)
-        .add_field("Player Label", system.player_label, inline=True)
-    )
+async def info_view(system_id: int, guild_id: int) -> Response:
+    system = await plugin.model.systems.get_lite(system_id, guild_id)
 
-    if system.description is not None:
-        embed.add_field("Description", system.description)
-
-    return [embed]
+    return {
+        "content": None,
+        "embeds": [await system.embed()],
+        "components": [],
+    }
 
 
-async def system_display(system: System) -> typing.Sequence[hikari.Embed]:
-    embeds = await system_display_lite(system)
-
-    game_embeds = [
-        hikari.Embed(
-            title=game.name,
-            timestamp=game.created_at,
-            color=game.status.color,
-        )
-        .set_footer("Created")
-        .set_thumbnail(game.image)
-        .add_field("Status", game.status_str, inline=True)
-        .add_field(
-            "Seeking Players",
-            "✅ Yes" if game.seeking_players else "⏹️ No",
-            inline=True,
-        )
-        .add_field("More Details", plugin.model.mention_command("game info"), inline=True)
-        # TODO: this limit of 10 should be made more accurate
-        for game in itertools.islice(system.games, 0, 10)
-    ]
-
-    return [*embeds, *game_embeds]
-
-
-async def system_main_menu(system: SystemLite) -> typing.Sequence[hikari.api.ComponentBuilder]:
-    return await asyncio.gather(
-        flare.Row(
-            EditButton.make(system),
-            DeleteButton.make(system),
+async def settings_view(system: SystemLite) -> Response:
+    return {
+        "content": None,
+        "embeds": await asyncio.gather(
+            system.embed(),
         ),
-    )
+        "components": await asyncio.gather(
+            flare.Row(
+                EditButton.make(system),
+                DeleteButton.make(system),
+            ),
+        ),
+    }
 
 
 class EditButton(flare.Button, label="Edit Details"):
@@ -218,9 +176,7 @@ class SystemCreateModal(flare.Modal, title="New System"):
         )
 
         await ctx.respond(
-            f"You can view this menu again with {plugin.model.mention_command('system settings')}",
-            embeds=await system_display_lite(system),
-            components=await system_main_menu(system),
+            **await settings_view(system),
             flags=hikari.MessageFlag.EPHEMERAL,
         )
 
@@ -267,8 +223,7 @@ class SystemEditModal(flare.Modal, title="Edit System"):
         system = await plugin.model.systems.get_lite(self.system_id, ctx.guild_id)
 
         await ctx.edit_response(
-            embeds=await system_display_lite(system),
-            components=await system_main_menu(system),
+            **await settings_view(system),
             flags=hikari.MessageFlag.EPHEMERAL,
         )
 
@@ -324,7 +279,7 @@ class SystemSettings:
     name = crescent.option(
         str,
         "the name of the system",
-        autocomplete=plugin.model.systems.autocomplete,
+        autocomplete=lambda ctx, option: plugin.model.systems.autocomplete(ctx, option),
     )
 
     async def callback(self, ctx: crescent.Context) -> None:
@@ -332,18 +287,18 @@ class SystemSettings:
 
         try:
             system_id = int(self.name)
-            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
-                raise AutocompleteSelectError()
         except ValueError as err:
             raise AutocompleteSelectError() from err
+        else:
+            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
+                raise AutocompleteSelectError()
 
         await ctx.defer(ephemeral=True)
 
         system = await plugin.model.systems.get_lite(system_id, ctx.guild_id)
 
         await ctx.respond(
-            embeds=await system_display_lite(system),
-            components=await system_main_menu(system),
+            **await settings_view(system),
             ephemeral=True,
         )
 
@@ -355,7 +310,7 @@ class SystemInfo:
     name = crescent.option(
         str,
         "the name of the system",
-        autocomplete=plugin.model.systems.autocomplete,
+        autocomplete=lambda ctx, option: plugin.model.systems.autocomplete(ctx, option),
     )
 
     async def callback(self, ctx: crescent.Context) -> None:
@@ -363,13 +318,12 @@ class SystemInfo:
 
         try:
             system_id = int(self.name)
-            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
-                raise AutocompleteSelectError()
         except ValueError as err:
             raise AutocompleteSelectError() from err
+        else:
+            if not await plugin.model.systems.id_exists(ctx.guild_id, system_id):
+                raise AutocompleteSelectError()
 
         await ctx.defer()
 
-        system = await plugin.model.systems.get_lite(system_id, ctx.guild_id)
-
-        await ctx.respond(embeds=await system_display_lite(system))
+        await ctx.respond(**await info_view(system_id, ctx.guild_id))

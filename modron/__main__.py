@@ -40,6 +40,7 @@ bot = hikari.GatewayBot(
 )
 flare.install(bot)
 client = crescent.Client(bot, model=model)
+client.plugins.load("modron.models")
 client.plugins.load_folder("modron.plugins")
 
 

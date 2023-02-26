@@ -1,5 +1,5 @@
 from modron.db.conn import Conn, DBConn, Record, convert, with_conn
-from modron.db.models import Character
+from modron.models import Character
 
 
 class CharacterDB(DBConn):

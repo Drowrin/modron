@@ -2,7 +2,7 @@ import crescent
 import hikari
 
 from modron.db.conn import Conn, DBConn, convert, with_conn
-from modron.db.models import System, SystemLite
+from modron.models import System, SystemLite
 
 
 class SystemDB(DBConn):
