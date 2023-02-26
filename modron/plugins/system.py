@@ -11,6 +11,7 @@ import toolbox.members
 
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotUniqueError
 from modron.models import Response, SystemLite
+from modron.utils import GuildContext
 
 if typing.TYPE_CHECKING:
     from modron.model import Model
@@ -271,7 +272,7 @@ class SystemCreate:
         max_length=30,
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         assert ctx.guild_id is not None
 
         if await plugin.model.systems.name_exists(ctx.guild_id, self.name):
@@ -290,7 +291,7 @@ class SystemSettings:
         autocomplete=lambda ctx, option: plugin.model.systems.autocomplete(ctx, option),
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         assert ctx.guild_id is not None
 
         try:
@@ -321,7 +322,7 @@ class SystemInfo:
         autocomplete=lambda ctx, option: plugin.model.systems.autocomplete(ctx, option),
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         assert ctx.guild_id is not None
 
         try:

@@ -5,7 +5,7 @@ import crescent
 import flare
 import hikari
 
-from modron.utils import get_me
+from modron.utils import GuildContext, get_me
 
 if typing.TYPE_CHECKING:
     from modron.model import Model
@@ -338,7 +338,7 @@ class FeedbackStart:
         default=True,
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         # immediately defer with an ephemeral message so that the response is above the menu
         await ctx.defer(ephemeral=True)
 
@@ -387,7 +387,7 @@ class FeedbackStart:
 @feedback.child
 @crescent.command(name="stop", description="convert this channel back into a regular channel")
 class FeedbackStop:
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         # this command can only be used in guilds, as set in the `feedback` crescent.Group above
         assert ctx.guild_id is not None
 

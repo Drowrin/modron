@@ -10,6 +10,7 @@ import hikari
 
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
 from modron.models import Game, GameLite, GameStatus, Response
+from modron.utils import GuildContext
 
 if typing.TYPE_CHECKING:
     from modron.model import Model
@@ -670,7 +671,7 @@ class GameCreate:
         default=True,
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         assert ctx.guild_id is not None
 
         try:
@@ -694,7 +695,7 @@ class GameSettings:
         autocomplete=lambda ctx, option: plugin.model.games.autocomplete_owned(ctx, option),
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         assert ctx.guild_id is not None
 
         try:
@@ -725,9 +726,7 @@ class GameInfo:
         autocomplete=lambda ctx, option: plugin.model.games.autocomplete_guild(ctx, option),
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
-        assert ctx.guild_id is not None
-
+    async def callback(self, ctx: GuildContext) -> None:
         try:
             game_id = int(self.name)
         except ValueError as err:

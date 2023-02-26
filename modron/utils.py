@@ -1,3 +1,4 @@
+import crescent
 import hikari
 
 
@@ -9,3 +10,9 @@ async def get_me(app: hikari.RESTAware) -> hikari.OwnUser:
         return app.cache.get_me() or await app.rest.fetch_my_user()
     else:
         return await app.rest.fetch_my_user()
+
+
+class GuildContext(crescent.Context):
+    # these are always available in commands that are not allowed in DMs
+    guild_id: hikari.Snowflake
+    member: hikari.Member
