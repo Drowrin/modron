@@ -48,7 +48,7 @@ def only_author(f: SignatureT[AuthorAwareT]):
 async def info_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(description=True, guild_resources=True)],
+        "embeds": [await game.embed(description=True, guild_resources=True, full_image=True)],
         "components": [],
     }
 

@@ -170,17 +170,23 @@ class GameLite:
         return self.system.player_label
 
     async def embed(
-        self, *, abbreviation: bool = False, description: bool = False, guild_resources: bool = False
+        self,
+        *,
+        abbreviation: bool = False,
+        description: bool = False,
+        guild_resources: bool = False,
+        full_image: bool = False,
     ) -> hikari.Embed:
-        embed = (
-            hikari.Embed(
-                title=self.name,
-                timestamp=self.created_at,
-                color=self.status.color,
-            )
-            .set_footer("Created")
-            .set_thumbnail(self.image)
-        )
+        embed = hikari.Embed(
+            title=self.name,
+            timestamp=self.created_at,
+            color=self.status.color,
+        ).set_footer("Created")
+
+        if full_image:
+            embed.set_image(self.image)
+        else:
+            embed.set_thumbnail(self.image)
 
         if abbreviation and self.abbreviation != self.name:
             embed.description = f"Abbreviated as `{self.abbreviation}`"
@@ -384,9 +390,12 @@ class Game(GameLite):
         abbreviation: bool = False,
         description: bool = False,
         guild_resources: bool = False,
+        full_image: bool = False,
         players: bool = False,
     ) -> hikari.Embed:
-        embed = await super().embed(abbreviation=abbreviation, description=description, guild_resources=guild_resources)
+        embed = await super().embed(
+            abbreviation=abbreviation, description=description, guild_resources=guild_resources, full_image=full_image
+        )
 
         if players and len(self.players) > 0:
             embed.add_field("Players", " ".join(f"<@{p.user_id}>" for p in self.players))
