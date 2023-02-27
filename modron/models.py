@@ -30,6 +30,12 @@ async def get_member(guild_id: int, user_id: int) -> hikari.Member:
     return plugin.app.cache.get_member(guild_id, user_id) or await plugin.app.rest.fetch_member(guild_id, user_id)
 
 
+def snowflake_or_none_converter(value: int | None) -> hikari.Snowflake | None:
+    if value is None:
+        return None
+    return hikari.Snowflake(value)
+
+
 @attrs.define(kw_only=True)
 class SystemLite:
     system_id: int
@@ -44,11 +50,25 @@ class SystemLite:
     player_label: str
 
     image: str | None = None
+    
+    emoji_name: str | None
+    emoji_id: hikari.Snowflake | None = attrs.field(converter=snowflake_or_none_converter)
+    emoji_animated: bool
+    
+    @property
+    def emoji(self) -> hikari.Emoji | None:
+        if self.emoji_name is None:
+            return None
+        
+        if self.emoji_id is None:
+            return hikari.UnicodeEmoji(self.emoji_name)
+
+        return hikari.CustomEmoji(id=self.emoji_id, name=self.emoji_name, is_animated=self.emoji_animated)
 
     async def embed(self, *, description: bool = False) -> hikari.Embed:
         embed = (
             hikari.Embed(
-                title=self.name,
+                title=f"{self.emoji} {self.name}"
             )
             .set_thumbnail(self.image)
             .add_field("Author Label", self.author_label, inline=True)
@@ -109,12 +129,6 @@ def system_converter(rs: list[dict[str, typing.Any]] | SystemLite | None):
     if isinstance(rs, SystemLite):
         return rs
     return next((SystemLite(**r) for r in rs), None)
-
-
-def snowflake_or_none_converter(value: int | None) -> hikari.Snowflake | None:
-    if value is None:
-        return None
-    return hikari.Snowflake(value)
 
 
 @attrs.define(kw_only=True)

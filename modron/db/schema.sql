@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS Systems (
 
     image VARCHAR(256),
 
+    emoji_name VARCHAR(20),
+    emoji_id BIGINT,
+    emoji_animated BOOLEAN DEFAULT FALSE,
+
     CONSTRAINT systems_pk PRIMARY KEY (system_id),
     CONSTRAINT systems_name_guild_unique UNIQUE (name, guild_id)
 );

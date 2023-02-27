@@ -19,12 +19,26 @@ class SystemDB(DBConn):
         player_label: str | None = None,
         description: str | None = None,
         image: str | None = None,
+        emoji_name: str | None = None,
+        emoji_id: int | None = None,
+        emoji_animated: bool | None = None,
     ):
         abbreviation = abbreviation or name[:15]
         return await conn.fetchrow(
             """
-            INSERT INTO Systems (guild_id, name, abbreviation, author_label, player_label, description, image)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO Systems (
+                guild_id,
+                name,
+                abbreviation,
+                author_label,
+                player_label,
+                description,
+                image,
+                emoji_name,
+                emoji_id,
+                emoji_animated
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *;
             """,
             guild_id,
@@ -34,6 +48,9 @@ class SystemDB(DBConn):
             player_label,
             description,
             image,
+            emoji_name,
+            emoji_id,
+            emoji_animated,
         )
 
     @with_conn
@@ -115,6 +132,9 @@ class SystemDB(DBConn):
         author_label: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
         player_label: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
         image: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        emoji_name: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        emoji_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
+        emoji_animated: hikari.UndefinedNoneOr[bool] = hikari.UNDEFINED,
     ):
         kwargs = {
             k: v
@@ -125,6 +145,9 @@ class SystemDB(DBConn):
                 "author_label": author_label,
                 "player_label": player_label,
                 "image": image,
+                "emoji_name": emoji_name,
+                "emoji_id": emoji_id,
+                "emoji_animated": emoji_animated,
             }.items()
             if v is not hikari.UNDEFINED
         }
