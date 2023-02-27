@@ -109,35 +109,39 @@ class SystemDB(DBConn):
         *,
         system_id: int,
         guild_id: int,
-        name: str | None = None,
-        abbreviation: str | None = None,
-        description: str | None = None,
-        author_label: str | None = None,
-        player_label: str | None = None,
-        image: str | None = None,
+        name: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        abbreviation: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        description: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        author_label: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        player_label: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
+        image: hikari.UndefinedNoneOr[str] = hikari.UNDEFINED,
     ):
+        kwargs = {
+            k: v
+            for k, v in {
+                "name": name,
+                "abbreviation": abbreviation,
+                "description": description,
+                "author_label": author_label,
+                "player_label": player_label,
+                "image": image,
+            }.items()
+            if v is not hikari.UNDEFINED
+        }
+        args = kwargs.values()
+        columns = ",\n".join(f"{k} = ${i + 3}" for i, k in enumerate(kwargs.keys()))
         await conn.execute(
-            """
+            f"""
             UPDATE Systems
             SET
-                name = COALESCE($3, name),
-                description = COALESCE($4, description),
-                abbreviation = COALESCE($5, abbreviation),
-                author_label = COALESCE($6, author_label),
-                player_label = COALESCE($7, player_label),
-                image = COALESCE($8, image)
+                {columns}
             WHERE
                 system_id = $1
                 AND guild_id = $2;
             """,
             system_id,
             guild_id,
-            name,
-            abbreviation,
-            description,
-            author_label,
-            player_label,
-            image,
+            *args,
         )
 
     @with_conn

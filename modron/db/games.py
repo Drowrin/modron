@@ -150,7 +150,7 @@ class GameDB(DBConn):
             if v is not hikari.UNDEFINED
         }
         args = kwargs.values()
-        columns = ",\n".join([f"{k} = ${i + 4}" for i, k in enumerate(kwargs.keys())])
+        columns = ",\n".join(f"{k} = ${i + 4}" for i, k in enumerate(kwargs.keys()))
         await conn.execute(
             f"""
             UPDATE Games
