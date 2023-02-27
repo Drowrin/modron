@@ -190,7 +190,10 @@ class GameDB(DBConn):
             FROM Games
             WHERE
                 guild_id = $1
-                AND name LIKE $2
+                AND (
+                    name ILIKE $2
+                    OR abbreviation ILIKE $2
+                )
             LIMIT 25;
             """,
             ctx.guild_id,
@@ -211,7 +214,10 @@ class GameDB(DBConn):
             WHERE
                 guild_id = $1
                 AND author_id = $2
-                AND name LIKE $3
+                AND (
+                    name ILIKE $3
+                    OR abbreviation ILIKE $3
+                )
             LIMIT 25;
             """,
             ctx.guild_id,

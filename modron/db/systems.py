@@ -190,7 +190,10 @@ class SystemDB(DBConn):
             FROM Systems
             WHERE
                 guild_id = $1
-                AND name LIKE $2
+                AND (
+                    name ILIKE $2
+                    OR abbreviation ILIKE $2
+                )
             LIMIT 25;
             """,
             ctx.guild_id,
