@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import functools
 import typing
 
 import crescent
 import flare
 import hikari
-import toolbox.members
+import toolbox
 
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotUniqueError
 from modron.models import Response, SystemLite
@@ -68,11 +69,90 @@ async def settings_view(system: SystemLite) -> Response:
         ),
         "components": await asyncio.gather(
             flare.Row(
+                EmojiButton.make(system.system_id, 60),
                 EditButton.make(system.system_id),
                 DeleteButton.make(system.system_id),
             ),
         ),
     }
+
+
+async def emoji_settings_view(system_id: int, seconds: int) -> Response:
+    timestamp = toolbox.strings.format_dt(toolbox.strings.utcnow() + datetime.timedelta(seconds=seconds), "R")
+    return {
+        "content": None,
+        "embeds": [
+            hikari.Embed(
+                description=(
+                    "React to this message to set the Emoji for this system." f"\nThis process will cancel {timestamp}"
+                )
+            )
+        ],
+        "components": await asyncio.gather(
+            flare.Row(
+                BackButton.make(system_id),
+            ),
+        ),
+    }
+
+
+class BackButton(flare.Button, label="Back"):
+    system_id: int
+
+    @classmethod
+    def make(cls, system_id: int) -> typing.Self:
+        return cls(system_id)
+
+    @require_permissions
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        assert ctx.guild_id is not None
+
+        system = await plugin.model.systems.get(system_id=self.system_id, guild_id=ctx.guild_id)
+
+        await ctx.edit_response(
+            **await settings_view(system),
+        )
+
+
+class EmojiButton(flare.Button, label="Set Emoji", style=hikari.ButtonStyle.SECONDARY):
+    system_id: int
+    timeout: int
+
+    @classmethod
+    def make(cls, system_id: int, timeout: int) -> typing.Self:
+        return cls(system_id, timeout)
+
+    @require_permissions
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        assert ctx.guild_id is not None
+
+        response = await ctx.respond(**await emoji_settings_view(self.system_id, self.timeout))
+        message = await response.retrieve_message()
+
+        try:
+            event = await plugin.app.wait_for(
+                hikari.ReactionAddEvent,
+                timeout=self.timeout,
+                predicate=lambda e: e.message_id == message.id and e.user_id == ctx.user.id,
+            )
+        except asyncio.TimeoutError:
+            return
+        finally:
+            await response.delete()
+
+        await plugin.model.systems.update(
+            system_id=self.system_id,
+            guild_id=ctx.guild_id,
+            emoji_name=event.emoji_name,
+            emoji_id=event.emoji_id,
+            emoji_animated=event.is_animated,
+        )
+
+        system = await plugin.model.systems.get(system_id=self.system_id, guild_id=ctx.guild_id)
+
+        await asyncio.gather(
+            ctx.respond(**await settings_view(system), flags=hikari.MessageFlag.EPHEMERAL),
+        )
 
 
 class EditButton(flare.Button, label="Edit Details"):

@@ -50,16 +50,16 @@ class SystemLite:
     player_label: str
 
     image: str | None = None
-    
+
     emoji_name: str | None
     emoji_id: hikari.Snowflake | None = attrs.field(converter=snowflake_or_none_converter)
     emoji_animated: bool
-    
+
     @property
     def emoji(self) -> hikari.Emoji | None:
         if self.emoji_name is None:
             return None
-        
+
         if self.emoji_id is None:
             return hikari.UnicodeEmoji(self.emoji_name)
 
@@ -67,9 +67,7 @@ class SystemLite:
 
     async def embed(self, *, description: bool = False) -> hikari.Embed:
         embed = (
-            hikari.Embed(
-                title=f"{self.emoji} {self.name}"
-            )
+            hikari.Embed(title=f"{self.emoji} {self.name}")
             .set_thumbnail(self.image)
             .add_field("Author Label", self.author_label, inline=True)
             .add_field("Player Label", self.player_label, inline=True)
