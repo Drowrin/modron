@@ -14,19 +14,22 @@ class SystemDB(DBConn):
         *,
         guild_id: int,
         name: str,
+        abbreviation: str | None = None,
         author_label: str | None = None,
         player_label: str | None = None,
         description: str | None = None,
         image: str | None = None,
     ):
+        abbreviation = abbreviation or name[:15]
         return await conn.fetchrow(
             """
-            INSERT INTO Systems (guild_id, name, author_label, player_label, description, image)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO Systems (guild_id, name, abbreviation, author_label, player_label, description, image)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *;
             """,
             guild_id,
             name,
+            abbreviation,
             author_label,
             player_label,
             description,
@@ -107,6 +110,7 @@ class SystemDB(DBConn):
         system_id: int,
         guild_id: int,
         name: str | None = None,
+        abbreviation: str | None = None,
         description: str | None = None,
         author_label: str | None = None,
         player_label: str | None = None,
@@ -118,9 +122,10 @@ class SystemDB(DBConn):
             SET
                 name = COALESCE($3, name),
                 description = COALESCE($4, description),
-                author_label = COALESCE($5, author_label),
-                player_label = COALESCE($6, player_label),
-                image = COALESCE($7, image)
+                abbreviation = COALESCE($5, abbreviation),
+                author_label = COALESCE($6, author_label),
+                player_label = COALESCE($7, player_label),
+                image = COALESCE($8, image)
             WHERE
                 system_id = $1
                 AND guild_id = $2;
@@ -128,6 +133,7 @@ class SystemDB(DBConn):
             system_id,
             guild_id,
             name,
+            abbreviation,
             description,
             author_label,
             player_label,

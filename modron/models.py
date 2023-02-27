@@ -37,6 +37,7 @@ class SystemLite:
     guild_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
 
     name: str
+    abbreviation: str
     description: str | None = None
 
     author_label: str
@@ -53,6 +54,9 @@ class SystemLite:
             .add_field("Author Label", self.author_label, inline=True)
             .add_field("Player Label", self.player_label, inline=True)
         )
+
+        if self.abbreviation != self.name:
+            embed.description = f"Abbreviated as `{self.abbreviation}`"
 
         if description and self.description is not None:
             embed.add_field("Description", self.description)
@@ -152,12 +156,6 @@ class GameLite:
         return status
 
     @property
-    def system_name(self) -> str | None:
-        if self.system is None:
-            return None
-        return self.system.name
-
-    @property
     def author_label(self) -> str:
         if self.system is None:
             return "Author"
@@ -191,8 +189,8 @@ class GameLite:
         if abbreviation and self.abbreviation != self.name:
             embed.description = f"Abbreviated as `{self.abbreviation}`"
 
-        if (system_name := self.system_name) is not None:
-            embed.add_field("System", system_name, inline=True)
+        if self.system is not None:
+            embed.add_field("System", self.system.abbreviation, inline=True)
 
         embed.add_field("Status", self.status_str, inline=True)
         embed.add_field(

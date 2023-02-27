@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS Systems (
     guild_id BIGINT NOT NULL,
 
     name VARCHAR(30) NOT NULL,
+    abbreviation VARCHAR(15) NOT NULL,
     description VARCHAR(1024),
 
     author_label VARCHAR(30) DEFAULT 'Author',
