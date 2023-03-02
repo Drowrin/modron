@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import typing
 
 import crescent
@@ -36,7 +35,6 @@ SignatureT = typing.Callable[[AuthorAwareT, flare.MessageContext], typing.Corout
 
 
 def only_author(f: SignatureT[AuthorAwareT]):
-    @functools.wraps(f)
     async def inner(self: AuthorAwareT, ctx: flare.MessageContext) -> None:
         if ctx.user.id != self.author_id:
             raise EditPermissionError("Game")

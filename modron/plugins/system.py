@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import datetime
-import functools
 import typing
 
 import crescent
@@ -35,7 +34,6 @@ SignatureT = typing.Callable[[typing.Any, flare.MessageContext], typing.Coroutin
 
 
 def require_permissions(f: SignatureT):
-    @functools.wraps(f)
     async def inner(self: typing.Any, ctx: flare.MessageContext) -> None:
         assert ctx.member is not None
 
