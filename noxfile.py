@@ -22,7 +22,7 @@ def fixes(session: nox.Session):
 
     session.run("black", *INCLUDED)
     session.run("isort", *INCLUDED)
-    session.run("ruff", "--fix-only", *INCLUDED)
+    session.run("ruff", "--fix-only", "--exit-zero", *INCLUDED)
     session.run("codespell", "-i", "2", "-w", *INCLUDED)
 
 
