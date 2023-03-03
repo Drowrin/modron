@@ -20,7 +20,7 @@ if typing.TYPE_CHECKING:
 else:
     Plugin = crescent.Plugin[hikari.GatewayBot, None]
 
-MANAGE_SYSTEM_PERMISSIONS = hikari.Permissions.ADMINISTRATOR
+MANAGE_SYSTEM_PERMISSIONS = hikari.Permissions.MANAGE_GUILD
 
 plugin = Plugin()
 system = crescent.Group(
