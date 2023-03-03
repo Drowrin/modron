@@ -56,6 +56,8 @@ async def settings_view(game: Game) -> Response:
         "content": None,
         "embeds": [await game.embed(abbreviation=True, description=True, guild_resources=True, players=True)],
         "components": await asyncio.gather(
+            # TODO: consolidate these buttons into "Discord Links", "Players", "Game Details"
+            # TODO: remove delete button and use a command?
             flare.Row(
                 ManageChannelsButton.make(game.game_id, game.author_id),
                 EditStatusButton.make(game.game_id, game.author_id),
@@ -65,7 +67,6 @@ async def settings_view(game: Game) -> Response:
             ),
             flare.Row(
                 EditButton.make(game.game_id, game.author_id),
-                DeleteButton.make(game.game_id, game.author_id),
             ),
         ),
     }
@@ -502,23 +503,6 @@ class EditButton(flare.Button, label="Edit Details"):
         await GameEditModal.make(game).send(ctx.interaction)
 
 
-class DeleteButton(flare.Button, label="Delete", style=hikari.ButtonStyle.DANGER):
-    game_id: int
-    author_id: int
-
-    @classmethod
-    def make(cls, game_id: int, author_id: int) -> typing.Self:
-        return cls(game_id, author_id)
-
-    @only_author
-    async def callback(self, ctx: flare.MessageContext) -> None:
-        assert ctx.guild_id is not None
-
-        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
-
-        await GameDeleteModal.make(game.game_id).send(ctx.interaction)
-
-
 game_name_text_input = flare.TextInput(
     label="Title",
     placeholder="The full title of the game",
@@ -661,7 +645,9 @@ class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):
             raise ConfirmationError()
 
         await plugin.model.games.delete(game_id=self.game_id)
-        response = await ctx.edit_response("Game successfully deleted!", embeds=[], components=[])
+        response = await ctx.respond(
+            "Game successfully deleted!", embeds=[], components=[], flags=hikari.MessageFlag.EPHEMERAL
+        )
         await asyncio.sleep(5)
         await response.delete()
 
@@ -698,6 +684,28 @@ class GameCreate:
                 raise AutocompleteSelectError()
 
         await GameCreateModal.make(system_id, self.title, self.title[:25], self.auto_setup).send(ctx.interaction)
+
+
+@plugin.include
+@game.child
+@crescent.command(name="delete", description="delete a game")
+class GameDelete:
+    name = crescent.option(
+        str,
+        "the name of the game",
+        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_owned(ctx, option),
+    )
+
+    async def callback(self, ctx: GuildContext) -> None:
+        try:
+            game_id = int(self.name)
+        except ValueError as err:
+            raise AutocompleteSelectError() from err
+        else:
+            if not await plugin.model.games.id_exists(game_id=game_id, guild_id=ctx.guild_id, author_id=ctx.user.id):
+                raise AutocompleteSelectError()
+
+        await GameDeleteModal.make(game_id).send(ctx.interaction)
 
 
 @plugin.include
