@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS Systems (
     abbreviation VARCHAR(15) NOT NULL,
     description VARCHAR(1024),
 
-    author_label VARCHAR(30) DEFAULT 'Author',
-    player_label VARCHAR(30) DEFAULT 'Player',
+    author_label VARCHAR(30) NOT NULL,
+    player_label VARCHAR(30) NOT NULL,
 
     image VARCHAR(256),
 
