@@ -689,8 +689,6 @@ class GameCreate:
     )
 
     async def callback(self, ctx: GuildContext) -> None:
-        assert ctx.guild_id is not None
-
         try:
             system_id = int(self.system)
         except ValueError as err:
@@ -713,8 +711,6 @@ class GameSettings:
     )
 
     async def callback(self, ctx: GuildContext) -> None:
-        assert ctx.guild_id is not None
-
         try:
             game_id = int(self.name)
         except ValueError as err:
