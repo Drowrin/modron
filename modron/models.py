@@ -367,9 +367,9 @@ class GameLite:
         )
 
         main, info, synopsis, voice = await asyncio.gather(
-            self.create_channel("main", category.id),
             self.create_read_only_channel("info", category.id),
             self.create_read_only_channel("synopsis", category.id),
+            self.create_channel("main", category.id),
             self.create_voice_channel("Voice", role.id, category.id),
         )
 
