@@ -259,7 +259,7 @@ class GameLite:
             ),
         ]
 
-    def read_only_overwrites(self):
+    def read_only_overwrites(self) -> typing.Sequence[hikari.PermissionOverwrite]:
         perms = (
             hikari.Permissions.SEND_MESSAGES
             | hikari.Permissions.CREATE_PUBLIC_THREADS
