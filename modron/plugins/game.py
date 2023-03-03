@@ -7,7 +7,7 @@ import crescent
 import flare
 import hikari
 
-from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError
+from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotFoundError
 from modron.models import Game, GameLite, GameStatus, Response
 from modron.utils import GuildContext
 
@@ -82,14 +82,62 @@ async def status_settings_view(game: Game) -> Response:
     }
 
 
+def get_kind_overwrites(game: GameLite, kind: ChannelKind) -> typing.Sequence[hikari.PermissionOverwrite]:
+    match kind:
+        case "main":
+            return []
+        case "info" | "synopsis":
+            return game.read_only_overwrites()
+        case "voice":
+            return game.voice_overwrites()
+        case "category":
+            return game.category_overwrites()
+
+
+def overwrite_to_text(overwrite: hikari.PermissionOverwrite, guild_id: hikari.Snowflakeish) -> str:
+    assert isinstance(overwrite.type, hikari.PermissionOverwriteType)
+    match overwrite.type:
+        case hikari.PermissionOverwriteType.ROLE:
+            if guild_id == overwrite.id:
+                name = "@everyone"
+            else:
+                name = f"<@&{overwrite.id}>"
+        case hikari.PermissionOverwriteType.MEMBER:
+            name = f"<@{overwrite.id}>"
+
+    description = "\n".join([f"✅ `{a.name}`" for a in overwrite.allow] + [f"❌ `{d.name}`" for d in overwrite.deny])
+
+    return f"{name}\n{description}"
+
+
 async def channel_settings_view(game: Game, kind: ChannelKind) -> Response:
+    overwrites = get_kind_overwrites(game, kind)
+
+    embeds = [await game.embed(guild_resources=True)]
+
+    buttons: list[flare.Button] = [BackButton.make(game.game_id, game.author_id)]
+
+    if len(overwrites) > 0:
+        buttons.append(OverwritesButton.make(game.game_id, game.author_id, kind))
+        embeds.append(
+            hikari.Embed(
+                title="Recommended Permissions",
+                description=(
+                    "The following permissions are recommended for this channel.\n"
+                    "Clieck `Apply Permissions` to apply them to the selected channel."
+                    "\n\n"
+                )
+                + "\n\n".join(overwrite_to_text(ow, game.guild_id) for ow in overwrites),
+            )
+        )
+
     return {
         "content": None,
-        "embeds": [await game.embed(guild_resources=True)],
+        "embeds": embeds,
         "components": await asyncio.gather(
             flare.Row(ChannelKindSelect.make(game.game_id, game.author_id, kind)),
             flare.Row(GameChannelSelect.make(game.game_id, game.author_id, kind)),
-            flare.Row(BackButton.make(game.game_id, game.author_id)),
+            flare.Row(*buttons),
         ),
     }
 
@@ -283,6 +331,43 @@ class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
         await ctx.edit_response(
             **await channel_settings_view(game, "main"),
         )
+
+
+class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.ButtonStyle.SECONDARY):
+    game_id: int
+    author_id: int
+    kind: ChannelKind
+
+    @classmethod
+    def make(cls, game_id: int, author_id: int, kind: ChannelKind) -> typing.Self:
+        return cls(game_id, author_id, kind)
+
+    @only_author
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        assert ctx.guild_id is not None
+
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        match self.kind:
+            case "main":
+                channel_id = game.main_channel_id
+            case "info":
+                channel_id = game.info_channel_id
+            case "synopsis":
+                channel_id = game.synopsis_channel_id
+            case "voice":
+                channel_id = game.voice_channel_id
+            case "category":
+                channel_id = game.category_channel_id
+
+        if channel_id is None:
+            raise NotFoundError(f"{self.kind.capitalize()} Channel")
+
+        await plugin.app.rest.edit_channel(channel_id, permission_overwrites=get_kind_overwrites(game, self.kind))
+
+        response = await ctx.respond("✅ Successfully set permissions!", flags=hikari.MessageFlag.EPHEMERAL)
+        await asyncio.sleep(5)
+        await response.delete()
 
 
 class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle.SECONDARY):

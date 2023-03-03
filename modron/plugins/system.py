@@ -123,7 +123,7 @@ class EmojiButton(flare.Button, label="Set Emoji", style=hikari.ButtonStyle.SECO
     @require_permissions
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
-        
+
         old_message = ctx.interaction.message
 
         response = await ctx.respond(**await emoji_settings_view(self.system_id, self.timeout))
@@ -149,7 +149,7 @@ class EmojiButton(flare.Button, label="Set Emoji", style=hikari.ButtonStyle.SECO
         )
 
         system = await plugin.model.systems.get(system_id=self.system_id, guild_id=ctx.guild_id)
-        
+
         await ctx.interaction.edit_message(old_message, **await settings_view(system))
 
 

@@ -290,7 +290,7 @@ class GameLite:
         if role_id is hikari.UNDEFINED:
             if self.role_id is None:
                 return []
-            
+
             role_id = self.role_id
 
         return [
