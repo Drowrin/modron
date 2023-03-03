@@ -82,7 +82,7 @@ async def emoji_settings_view(system_id: int, seconds: int) -> Response:
         "embeds": [
             hikari.Embed(
                 description=(
-                    "React to this message to set the Emoji for this system." f"\nThis process will cancel {timestamp}"
+                    f"React to this message to set the Emoji for this system.\nThis process will cancel {timestamp}"
                 )
             )
         ],
@@ -123,6 +123,8 @@ class EmojiButton(flare.Button, label="Set Emoji", style=hikari.ButtonStyle.SECO
     @require_permissions
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
+        
+        old_message = ctx.interaction.message
 
         response = await ctx.respond(**await emoji_settings_view(self.system_id, self.timeout))
         message = await response.retrieve_message()
@@ -147,10 +149,8 @@ class EmojiButton(flare.Button, label="Set Emoji", style=hikari.ButtonStyle.SECO
         )
 
         system = await plugin.model.systems.get(system_id=self.system_id, guild_id=ctx.guild_id)
-
-        await asyncio.gather(
-            ctx.respond(**await settings_view(system), flags=hikari.MessageFlag.EPHEMERAL),
-        )
+        
+        await ctx.interaction.edit_message(old_message, **await settings_view(system))
 
 
 class EditButton(flare.Button, label="Edit Details"):
