@@ -95,7 +95,7 @@ class GameDB(DBConn):
         )
 
     @with_conn
-    async def id_exists(self, conn: Conn, *, guild_id: int, game_id: int) -> bool:
+    async def id_exists(self, conn: Conn, *, guild_id: int, game_id: int, author_id: int | None = None) -> bool:
         return await conn.fetchval(
             """
             SELECT EXISTS(
@@ -104,10 +104,12 @@ class GameDB(DBConn):
                 WHERE
                     guild_id = $1
                     AND game_id = $2
+                    AND author_id = COALESCE($3, author_id)
             )
             """,
             guild_id,
             game_id,
+            author_id,
         )
 
     @with_conn
