@@ -288,7 +288,10 @@ class GameLite:
         self, role_id: hikari.UndefinedOr[hikari.Snowflake] = hikari.UNDEFINED
     ) -> list[hikari.PermissionOverwrite]:
         if role_id is hikari.UNDEFINED:
-            return []
+            if self.role_id is None:
+                return []
+            
+            role_id = self.role_id
 
         return [
             hikari.PermissionOverwrite(
