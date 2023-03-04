@@ -50,14 +50,6 @@ def only_author(f: SignatureT[AuthorAwareT]):
     return inner
 
 
-async def info_view(game: Game) -> Response:
-    return {
-        "content": None,
-        "embeds": [await plugin.model.render.game(game, description=True, guild_resources=True, full_image=True)],
-        "components": [],
-    }
-
-
 async def settings_view(game: Game) -> Response:
     return {
         "content": None,
@@ -813,29 +805,3 @@ class GameSettings:
             **await settings_view(game),
             ephemeral=True,
         )
-
-
-@plugin.include
-@game.child
-@crescent.command(name="info", description="display information for a game")
-class GameInfo:
-    name = crescent.option(
-        str,
-        "the name of the game",
-        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_guild(ctx, option),
-    )
-
-    async def callback(self, ctx: GuildContext) -> None:
-        try:
-            game_id = int(self.name)
-        except ValueError as err:
-            raise AutocompleteSelectError() from err
-        else:
-            if not await plugin.model.games.id_exists(game_id=game_id, guild_id=ctx.guild_id):
-                raise AutocompleteSelectError()
-
-        await ctx.defer()
-
-        game = await plugin.model.games.get(game_id=game_id, guild_id=ctx.guild_id)
-
-        await ctx.respond(**await info_view(game))

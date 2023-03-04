@@ -47,18 +47,6 @@ def require_permissions(f: SignatureT):
     return inner
 
 
-async def info_view(system_id: int, guild_id: int) -> Response:
-    system = await plugin.model.systems.get_lite(system_id=system_id, guild_id=guild_id)
-
-    return {
-        "content": None,
-        "embeds": await asyncio.gather(
-            plugin.model.render.system(system, description=True),
-        ),
-        "components": [],
-    }
-
-
 async def settings_view(system: SystemLite) -> Response:
     return {
         "content": None,
@@ -399,29 +387,3 @@ class SystemSettings:
             **await settings_view(system),
             ephemeral=True,
         )
-
-
-@plugin.include
-@system.child
-@crescent.command(name="info", description="display information for a system")
-class SystemInfo:
-    name = crescent.option(
-        str,
-        "the name of the system",
-        autocomplete=lambda ctx, option: plugin.model.systems.autocomplete(ctx, option),
-    )
-
-    async def callback(self, ctx: GuildContext) -> None:
-        assert ctx.guild_id is not None
-
-        try:
-            system_id = int(self.name)
-        except ValueError as err:
-            raise AutocompleteSelectError() from err
-        else:
-            if not await plugin.model.systems.id_exists(system_id=system_id, guild_id=ctx.guild_id):
-                raise AutocompleteSelectError()
-
-        await ctx.defer()
-
-        await ctx.respond(**await info_view(system_id, ctx.guild_id))
