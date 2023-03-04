@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import typing
 
 import crescent
@@ -67,9 +68,11 @@ async def settings_view(game: Game) -> Response:
         ],
         "components": await asyncio.gather(
             flare.Row(
-                DetailsMenuButton.make(game.game_id, game.author_id),
-                ConnectionsMenuButton.make(game.game_id, game.author_id),
-                PlayersMenuButton.make(game.game_id, game.author_id),
+                SwitchView.make("manage_details", game.game_id, game.author_id).set_label("Game Details"),
+                SwitchView.make("manage_connections_main", game.game_id, game.author_id).set_label(
+                    "Connected Role/Channels"
+                ),
+                SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Player Settings"),
             ),
         ),
     }
@@ -81,7 +84,10 @@ async def manage_details_view(game: Game) -> Response:
         "embeds": [await plugin.model.render.game(game, abbreviation=True, description=True)],
         "components": await asyncio.gather(
             flare.Row(StatusSelect.make(game.game_id, game.author_id, game.status)),
-            flare.Row(EditButton.make(game.game_id, game.author_id), BackButton.make(game.game_id, game.author_id)),
+            flare.Row(
+                EditButton.make(game.game_id, game.author_id),
+                SwitchView.make("settings", game.game_id, game.author_id).set_label("Back"),
+            ),
         ),
     }
 
@@ -114,12 +120,12 @@ def overwrite_to_text(overwrite: hikari.PermissionOverwrite, guild_id: hikari.Sn
     return f"{name}\n{description}"
 
 
-async def manage_connections_view(game: Game, kind: ConnectionKind) -> Response:
+async def manage_connections_view(kind: ConnectionKind, game: Game) -> Response:
     overwrites = get_kind_overwrites(game, kind)
 
     embeds = [await plugin.model.render.game(game, guild_resources=True)]
 
-    buttons: list[flare.Button] = [BackButton.make(game.game_id, game.author_id)]
+    buttons: list[flare.Button] = [SwitchView.make("settings", game.game_id, game.author_id).set_label("Back")]
 
     if len(overwrites) > 0:
         buttons.append(OverwritesButton.make(game.game_id, game.author_id, kind))
@@ -152,18 +158,103 @@ async def manage_connections_view(game: Game, kind: ConnectionKind) -> Response:
     }
 
 
+async def players_settings_view(game: Game) -> Response:
+    return {
+        "content": None,
+        "embeds": [await plugin.model.render.game(game, players=True)],
+        "components": await asyncio.gather(
+            flare.Row(
+                ToggleSeekingPlayers.make(game.game_id, game.author_id, game.seeking_players),
+                SwitchView.make("add_players", game.game_id, game.author_id).set_label("Add Players"),
+                SwitchView.make("manage_players", game.game_id, game.author_id).set_label("Manage Players"),
+                SwitchView.make("settings", game.game_id, game.author_id).set_label("Back"),
+            ),
+        ),
+    }
+
+
+async def add_players_view(game: Game) -> Response:
+    return {
+        "content": None,
+        "embeds": [await plugin.model.render.game(game, players=True)],
+        "components": await asyncio.gather(
+            flare.Row(AddPlayerSelect.make(game.game_id, game.author_id)),
+            flare.Row(
+                SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Back"),
+            ),
+        ),
+    }
+
+
 async def manage_players_view(game: Game) -> Response:
     return {
         "content": None,
         "embeds": [await plugin.model.render.game(game, players=True)],
         "components": await asyncio.gather(
-            flare.Row(UserSelect.make(game.game_id, game.author_id)),
             flare.Row(
-                ToggleSeekingPlayers.make(game.game_id, game.author_id, game.seeking_players),
-                BackButton.make(game.game_id, game.author_id),
+                SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Back"),
             ),
         ),
     }
+
+
+ViewName = typing.Literal[
+    "settings",
+    "add_players",
+    "player_settings",
+    "manage_players",
+    "manage_details",
+    "manage_connections_main",
+    "manage_connections_info",
+    "manage_connections_synopsis",
+    "manage_connections_voice",
+    "manage_connections_category",
+    "manage_connections_role",
+]
+
+
+class SwitchView(flare.Button):
+    game_id: int
+    author_id: int
+    view: ViewName
+
+    @classmethod
+    def make(cls, view: ViewName, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id, view)
+
+    @only_author
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        assert ctx.guild_id is not None
+
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        match self.view:
+            case "settings":
+                v = settings_view
+            case "add_players":
+                v = add_players_view
+            case "player_settings":
+                v = players_settings_view
+            case "manage_players":
+                v = manage_players_view
+            case "manage_details":
+                v = manage_details_view
+            case "manage_connections_main":
+                v = functools.partial(manage_connections_view, "main")
+            case "manage_connections_info":
+                v = functools.partial(manage_connections_view, "info")
+            case "manage_connections_synopsis":
+                v = functools.partial(manage_connections_view, "synopsis")
+            case "manage_connections_voice":
+                v = functools.partial(manage_connections_view, "voice")
+            case "manage_connections_category":
+                v = functools.partial(manage_connections_view, "category")
+            case "manage_connections_role":
+                v = functools.partial(manage_connections_view, "role")
+
+        await ctx.edit_response(
+            **await v(game),
+        )
 
 
 ChannelKind = typing.Literal["main", "info", "synopsis", "voice", "category"]
@@ -229,7 +320,7 @@ class ConnectionKindSelect(flare.TextSelect, min_values=1, max_values=1):
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await manage_connections_view(game, typing.cast(ConnectionKind, ctx.values[0])),
+            **await manage_connections_view(typing.cast(ConnectionKind, ctx.values[0]), game),
         )
 
 
@@ -266,7 +357,7 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await manage_connections_view(game, self.kind),
+            **await manage_connections_view(self.kind, game),
         )
 
 
@@ -293,11 +384,11 @@ class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await manage_connections_view(game, "role"),
+            **await manage_connections_view("role", game),
         )
 
 
-class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Select Players to add"):
+class AddPlayerSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Select Players to add"):
     game_id: int
     author_id: int
 
@@ -322,7 +413,7 @@ class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Sel
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await manage_players_view(game),
+            **await players_settings_view(game),
         )
 
 
@@ -359,25 +450,6 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
 
         await ctx.edit_response(
             **await manage_details_view(game),
-        )
-
-
-class ConnectionsMenuButton(flare.Button, label="Connected Role/Channels"):
-    game_id: int
-    author_id: int
-
-    @classmethod
-    def make(cls, game_id: int, author_id: int) -> typing.Self:
-        return cls(game_id, author_id)
-
-    @only_author
-    async def callback(self, ctx: flare.MessageContext) -> None:
-        assert ctx.guild_id is not None
-
-        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
-
-        await ctx.edit_response(
-            **await manage_connections_view(game, "main"),
         )
 
 
@@ -421,63 +493,6 @@ class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.But
         await response.delete()
 
 
-class PlayersMenuButton(flare.Button, label="Player Settings"):
-    game_id: int
-    author_id: int
-
-    @classmethod
-    def make(cls, game_id: int, author_id: int) -> typing.Self:
-        return cls(game_id, author_id)
-
-    @only_author
-    async def callback(self, ctx: flare.MessageContext) -> None:
-        assert ctx.guild_id is not None
-
-        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
-
-        await ctx.edit_response(
-            **await manage_players_view(game),
-        )
-
-
-class DetailsMenuButton(flare.Button, label="Game Details"):
-    game_id: int
-    author_id: int
-
-    @classmethod
-    def make(cls, game_id: int, author_id: int) -> typing.Self:
-        return cls(game_id, author_id)
-
-    @only_author
-    async def callback(self, ctx: flare.MessageContext) -> None:
-        assert ctx.guild_id is not None
-
-        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
-
-        await ctx.edit_response(
-            **await manage_details_view(game),
-        )
-
-
-class BackButton(flare.Button, label="Back"):
-    game_id: int
-    author_id: int
-
-    @classmethod
-    def make(cls, game_id: int, author_id: int) -> typing.Self:
-        return cls(game_id, author_id)
-
-    @only_author
-    async def callback(self, ctx: flare.MessageContext) -> None:
-        assert ctx.guild_id is not None
-
-        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
-
-        await ctx.edit_response(
-            **await settings_view(game),
-        )
-
-
 class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     game_id: int
     author_id: int
@@ -501,7 +516,7 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
         )
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
-        await ctx.edit_response(**await settings_view(game))
+        await ctx.edit_response(**await players_settings_view(game))
 
 
 class EditButton(flare.Button, label="Edit Text", style=hikari.ButtonStyle.SECONDARY):
