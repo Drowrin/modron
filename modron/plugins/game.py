@@ -356,6 +356,11 @@ class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, 
         assert ctx.guild_id is not None
 
         await ctx.defer()
+
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        await plugin.model.create.remove_role(game)
+
         await plugin.model.games.update(
             game_id=self.game_id,
             guild_id=ctx.guild_id,
@@ -364,6 +369,8 @@ class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, 
         )
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        await plugin.model.create.apply_role(game)
 
         await ctx.edit_response(
             **await manage_connections_view("role", game),
@@ -389,6 +396,8 @@ class AddPlayerSelect(flare.UserSelect, min_values=1, max_values=25, placeholder
         )
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        await plugin.model.create.apply_role(game)
 
         await ctx.edit_response(
             **await players_settings_view(game),
@@ -448,6 +457,8 @@ class RemovePlayerButton(flare.Button, label="Remove Player", style=hikari.Butto
         await plugin.model.players.delete(game_id=self.game_id, user_id=self.player_id)
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        await plugin.model.create.remove_role_from(game, hikari.Snowflake(self.player_id))
 
         await ctx.edit_response(
             **await manage_players_view(None, game),
@@ -648,6 +659,8 @@ class GameCreateModal(flare.Modal, title="New Game"):
             game_id=game_lite.game_id,
             guild_id=ctx.guild_id,
         )
+
+        await plugin.model.create.apply_role(game)
 
         await ctx.respond(
             **await settings_view(game),

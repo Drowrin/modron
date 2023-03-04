@@ -106,6 +106,8 @@ class JoinGame:
             plugin.model.players.insert(user_id=ctx.user.id, game_id=game_id),
         )
 
+        await plugin.model.create.apply_role_to(game, ctx.user.id)
+
         await ctx.respond(
             content=f"Successfully joined {game.name}!",
             flags=hikari.MessageFlag.EPHEMERAL,
@@ -136,6 +138,8 @@ class LeaveGame:
             plugin.model.games.get_lite(game_id=game_id, guild_id=ctx.guild_id),
             plugin.model.players.delete(user_id=ctx.user.id, game_id=game_id),
         )
+
+        await plugin.model.create.remove_role_from(game, ctx.user.id)
 
         await ctx.respond(
             content=f"Successfully left {game.name}!",

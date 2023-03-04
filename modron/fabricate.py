@@ -4,7 +4,7 @@ import typing
 import hikari
 
 from modron.db.games import GameDB
-from modron.models import GameLite
+from modron.models import Game, GameLite
 
 
 class Fabricator:
@@ -82,18 +82,54 @@ class Fabricator:
             ),
         ]
 
+    async def remove_role_from(self, game: GameLite, user_id: hikari.Snowflake):
+        if game.role_id is None:
+            return
+
+        await self.client.remove_role_from_member(
+            game.guild_id,
+            user_id,
+            game.role_id,
+        )
+
+    async def remove_role(self, game: Game):
+        if game.role_id is None:
+            return
+
+        await asyncio.gather(
+            *[
+                self.remove_role_from(game, user_id)
+                for user_id in [game.author_id, *[player.user_id for player in game.players]]
+            ]
+        )
+
+    async def apply_role(self, game: Game):
+        if game.role_id is None:
+            return
+
+        await asyncio.gather(
+            *[
+                self.apply_role_to(game, user_id)
+                for user_id in [game.author_id, *[player.user_id for player in game.players]]
+            ]
+        )
+
+    async def apply_role_to(self, game: GameLite, user_id: hikari.Snowflake):
+        if game.role_id is None:
+            return
+
+        await self.client.add_role_to_member(
+            game.guild_id,
+            user_id,
+            game.role_id,
+        )
+
     async def create_role(self, game: GameLite) -> hikari.Role:
-        role = await self.client.create_role(
+        return await self.client.create_role(
             game.guild_id,
             name=game.abbreviation,
             mentionable=True,
         )
-        await self.client.add_role_to_member(
-            game.guild_id,
-            game.author_id,
-            role.id,
-        )
-        return role
 
     async def create_channel_category(self, game: GameLite) -> hikari.GuildCategory:
         return await self.client.create_guild_category(
@@ -156,3 +192,6 @@ class Fabricator:
             synopsis_channel_id=synopsis.id,
             voice_channel_id=voice.id,
         )
+
+        game = await self.games.get(game_id=game.game_id, guild_id=game.guild_id)
+        await self.apply_role(game)
