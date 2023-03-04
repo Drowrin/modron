@@ -57,7 +57,23 @@ def only_author(f: SignatureT[AuthorAwareT]):
     return inner
 
 
-async def settings_view(game: Game) -> Response:
+async def settings_view(member: hikari.Member, game: Game) -> Response:
+    buttons: list[flare.Button] = [
+        SwitchView.make("manage_details", game.game_id, game.author_id).set_label("Game Details"),
+        SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Player Settings"),
+    ]
+
+    perms = toolbox.members.calculate_permissions(member)
+    if perms.any(hikari.Permissions.MANAGE_CHANNELS, hikari.Permissions.MANAGE_ROLES):
+        buttons.append(
+            SwitchView.make(
+                "manage_connections",
+                game.game_id,
+                game.author_id,
+                extra="main",
+            ).set_label("Connected Role/Channels")
+        )
+
     return {
         "content": None,
         "embeds": [
@@ -66,13 +82,7 @@ async def settings_view(game: Game) -> Response:
             )
         ],
         "components": await asyncio.gather(
-            flare.Row(
-                SwitchView.make("manage_details", game.game_id, game.author_id).set_label("Game Details"),
-                SwitchView.make("manage_connections", game.game_id, game.author_id, extra="main").set_label(
-                    "Connected Role/Channels"
-                ),
-                SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Player Settings"),
-            ),
+            flare.Row(*buttons),
         ),
     }
 
@@ -119,7 +129,7 @@ def overwrite_to_text(overwrite: hikari.PermissionOverwrite, guild_id: hikari.Sn
     return f"{name}\n{description}"
 
 
-async def manage_connections_view(kind: ConnectionKind, game: Game) -> Response:
+async def manage_connections_view(member: hikari.Member, kind: ConnectionKind, game: Game) -> Response:
     overwrites = get_kind_overwrites(game, kind)
 
     embeds = [await plugin.model.render.game(game, guild_resources=True)]
@@ -150,7 +160,7 @@ async def manage_connections_view(kind: ConnectionKind, game: Game) -> Response:
         "content": None,
         "embeds": embeds,
         "components": await asyncio.gather(
-            flare.Row(ConnectionKindSelect.make(game.game_id, game.author_id, kind)),
+            flare.Row(ConnectionKindSelect.make(member, game.game_id, game.author_id, kind)),
             flare.Row(select),
             flare.Row(*buttons),
         ),
@@ -221,12 +231,13 @@ class SwitchView(flare.Button):
     @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
+        assert ctx.member is not None
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         match self.view:
             case "settings":
-                v = settings_view
+                v = functools.partial(settings_view, ctx.member)
             case "add_players":
                 v = add_players_view
             case "player_settings":
@@ -239,7 +250,7 @@ class SwitchView(flare.Button):
             case "manage_details":
                 v = manage_details_view
             case "manage_connections":
-                v = functools.partial(manage_connections_view, typing.cast(ConnectionKind, self.extra))
+                v = functools.partial(manage_connections_view, ctx.member, typing.cast(ConnectionKind, self.extra))
 
         await ctx.edit_response(
             **await v(game),
@@ -256,60 +267,72 @@ class ConnectionKindSelect(flare.TextSelect, min_values=1, max_values=1):
     kind: ConnectionKind
 
     @classmethod
-    def make(cls, game_id: int, author_id: int, kind: ConnectionKind) -> typing.Self:
-        return cls(game_id, author_id, kind).set_options(
-            hikari.SelectMenuOption(
-                label="Main Channel",
-                value="main",
-                description="Select the main discussion channel for this game",
-                emoji=None,
-                is_default=kind == "main",
-            ),
-            hikari.SelectMenuOption(
-                label="Info Channel",
-                value="info",
-                description="the channel where players can find info and resources",
-                emoji=None,
-                is_default=kind == "info",
-            ),
-            hikari.SelectMenuOption(
-                label="Synopsis Channel",
-                value="synopsis",
-                description="the channel where you will post synopsis of each session",
-                emoji=None,
-                is_default=kind == "synopsis",
-            ),
-            hikari.SelectMenuOption(
-                label="Voice Channel",
-                value="voice",
-                description="the voice channel that players should join during sessions",
-                emoji=None,
-                is_default=kind == "voice",
-            ),
-            hikari.SelectMenuOption(
-                label="Role",
-                value="role",
-                description="the role that will be assigned to all players",
-                emoji=None,
-                is_default=kind == "role",
-            ),
-            hikari.SelectMenuOption(
-                label="Category",
-                value="category",
-                description="the category that contains other channels related to this game",
-                emoji=None,
-                is_default=kind == "category",
-            ),
-        )
+    def make(cls, member: hikari.Member, game_id: int, author_id: int, kind: ConnectionKind) -> typing.Self:
+        options: list[hikari.SelectMenuOption] = []
+
+        perms = toolbox.members.calculate_permissions(member)
+
+        if perms.all(hikari.Permissions.MANAGE_CHANNELS):
+            options += [
+                hikari.SelectMenuOption(
+                    label="Main Channel",
+                    value="main",
+                    description="Select the main discussion channel for this game",
+                    emoji=None,
+                    is_default=kind == "main",
+                ),
+                hikari.SelectMenuOption(
+                    label="Info Channel",
+                    value="info",
+                    description="the channel where players can find info and resources",
+                    emoji=None,
+                    is_default=kind == "info",
+                ),
+                hikari.SelectMenuOption(
+                    label="Synopsis Channel",
+                    value="synopsis",
+                    description="the channel where you will post synopsis of each session",
+                    emoji=None,
+                    is_default=kind == "synopsis",
+                ),
+                hikari.SelectMenuOption(
+                    label="Voice Channel",
+                    value="voice",
+                    description="the voice channel that players should join during sessions",
+                    emoji=None,
+                    is_default=kind == "voice",
+                ),
+                hikari.SelectMenuOption(
+                    label="Category",
+                    value="category",
+                    description="the category that contains other channels related to this game",
+                    emoji=None,
+                    is_default=kind == "category",
+                ),
+            ]
+
+        if perms.all(hikari.Permissions.MANAGE_ROLES):
+            options += [
+                hikari.SelectMenuOption(
+                    label="Role",
+                    value="role",
+                    description="the role that will be assigned to all players",
+                    emoji=None,
+                    is_default=kind == "role",
+                )
+            ]
+
+        return cls(game_id, author_id, kind).set_options(*options)
 
     @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
+        assert ctx.member is not None
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await manage_connections_view(typing.cast(ConnectionKind, ctx.values[0]), game),
+            **await manage_connections_view(ctx.member, typing.cast(ConnectionKind, ctx.values[0]), game),
         )
 
 
@@ -334,6 +357,7 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
     @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
+        assert ctx.member is not None
 
         await ctx.defer()
         await plugin.model.games.update(
@@ -346,7 +370,7 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await manage_connections_view(self.kind, game),
+            **await manage_connections_view(ctx.member, self.kind, game),
         )
 
 
@@ -361,6 +385,7 @@ class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, 
     @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
         assert ctx.guild_id is not None
+        assert ctx.member is not None
 
         await ctx.defer()
 
@@ -380,7 +405,7 @@ class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, 
         await plugin.model.create.apply_role(game)
 
         await ctx.edit_response(
-            **await manage_connections_view("role", game),
+            **await manage_connections_view(ctx.member, "role", game),
         )
 
 
@@ -645,6 +670,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
         assert self.name.value is not None
         # this can only be accessed in guilds, so this should not be None
         assert ctx.guild_id is not None
+        assert ctx.member is not None
 
         await ctx.defer()
 
@@ -670,7 +696,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
         await plugin.model.create.apply_role(game)
 
         await ctx.respond(
-            **await settings_view(game),
+            **await settings_view(ctx.member, game),
             flags=hikari.MessageFlag.EPHEMERAL,
         )
 
@@ -822,6 +848,6 @@ class GameSettings:
         game = await plugin.model.games.get(game_id=game_id, guild_id=ctx.guild_id)
 
         await ctx.respond(
-            **await settings_view(game),
+            **await settings_view(ctx.member, game),
             ephemeral=True,
         )
