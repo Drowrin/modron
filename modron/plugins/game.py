@@ -14,8 +14,8 @@ from modron.exceptions import (
     ModronError,
     NotFoundError,
 )
-from modron.models import Game, GameLite, GameStatus, Response
-from modron.utils import GuildContext
+from modron.models import Game, GameLite, GameStatus
+from modron.utils import GuildContext, Response
 
 if typing.TYPE_CHECKING:
     from modron.model import Model
@@ -52,7 +52,7 @@ def only_author(f: SignatureT[AuthorAwareT]):
 async def info_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(description=True, guild_resources=True, full_image=True)],
+        "embeds": [await plugin.model.render.game(game, description=True, guild_resources=True, full_image=True)],
         "components": [],
     }
 
@@ -60,7 +60,11 @@ async def info_view(game: Game) -> Response:
 async def settings_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(abbreviation=True, description=True, guild_resources=True, players=True)],
+        "embeds": [
+            await plugin.model.render.game(
+                game, abbreviation=True, description=True, guild_resources=True, players=True
+            )
+        ],
         "components": await asyncio.gather(
             flare.Row(
                 DetailsMenuButton.make(game.game_id, game.author_id),
@@ -74,7 +78,7 @@ async def settings_view(game: Game) -> Response:
 async def manage_details_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(abbreviation=True, description=True)],
+        "embeds": [await plugin.model.render.game(game, abbreviation=True, description=True)],
         "components": await asyncio.gather(
             flare.Row(StatusSelect.make(game.game_id, game.author_id, game.status)),
             flare.Row(EditButton.make(game.game_id, game.author_id), BackButton.make(game.game_id, game.author_id)),
@@ -87,11 +91,11 @@ def get_kind_overwrites(game: GameLite, kind: ConnectionKind) -> typing.Sequence
         case "main" | "role":
             return []
         case "info" | "synopsis":
-            return game.read_only_overwrites()
+            return plugin.model.create.read_only_overwrites(game)
         case "voice":
-            return game.voice_overwrites()
+            return plugin.model.create.voice_overwrites(game)
         case "category":
-            return game.category_overwrites()
+            return plugin.model.create.category_overwrites(game)
 
 
 def overwrite_to_text(overwrite: hikari.PermissionOverwrite, guild_id: hikari.Snowflakeish) -> str:
@@ -113,7 +117,7 @@ def overwrite_to_text(overwrite: hikari.PermissionOverwrite, guild_id: hikari.Sn
 async def manage_connections_view(game: Game, kind: ConnectionKind) -> Response:
     overwrites = get_kind_overwrites(game, kind)
 
-    embeds = [await game.embed(guild_resources=True)]
+    embeds = [await plugin.model.render.game(game, guild_resources=True)]
 
     buttons: list[flare.Button] = [BackButton.make(game.game_id, game.author_id)]
 
@@ -151,7 +155,7 @@ async def manage_connections_view(game: Game, kind: ConnectionKind) -> Response:
 async def manage_players_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed(players=True)],
+        "embeds": [await plugin.model.render.game(game, players=True)],
         "components": await asyncio.gather(
             flare.Row(UserSelect.make(game.game_id, game.author_id)),
             flare.Row(
@@ -586,7 +590,7 @@ class GameCreateModal(flare.Modal, title="New Game"):
         )
 
         if self.auto_setup:
-            await game_lite.full_setup()
+            await plugin.model.create.full_setup(game_lite)
 
         game = await plugin.model.games.get(
             game_id=game_lite.game_id,

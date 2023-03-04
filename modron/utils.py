@@ -1,3 +1,5 @@
+import typing
+
 import crescent
 import hikari
 
@@ -16,3 +18,9 @@ class GuildContext(crescent.Context):
     # these are always available in commands that are not allowed in DMs
     guild_id: hikari.Snowflake
     member: hikari.Member
+
+
+class Response(typing.TypedDict):
+    content: hikari.UndefinedNoneOr[str]
+    embeds: typing.Sequence[hikari.Embed]
+    components: typing.Sequence[hikari.api.ComponentBuilder]

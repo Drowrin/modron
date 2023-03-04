@@ -10,8 +10,8 @@ import hikari
 import toolbox
 
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotUniqueError
-from modron.models import Response, SystemLite
-from modron.utils import GuildContext
+from modron.models import SystemLite
+from modron.utils import GuildContext, Response
 
 if typing.TYPE_CHECKING:
     from modron.model import Model
@@ -53,7 +53,7 @@ async def info_view(system_id: int, guild_id: int) -> Response:
     return {
         "content": None,
         "embeds": await asyncio.gather(
-            system.embed(description=True),
+            plugin.model.render.system(system, description=True),
         ),
         "components": [],
     }
@@ -63,7 +63,7 @@ async def settings_view(system: SystemLite) -> Response:
     return {
         "content": None,
         "embeds": await asyncio.gather(
-            system.embed(description=True),
+            plugin.model.render.system(system, description=True),
         ),
         "components": await asyncio.gather(
             flare.Row(
