@@ -1,5 +1,6 @@
 import crescent
 import hikari
+import toolbox
 
 from modron.db.conn import Conn, DBConn, convert, with_conn
 from modron.models import Game, GameLite
@@ -205,27 +206,47 @@ class GameDB(DBConn):
         return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
 
     @with_conn
-    async def autocomplete_owned(
+    async def autocomplete_editable(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
     ) -> list[hikari.CommandChoice]:
-        results = await conn.fetch(
-            """
-            SELECT
-                game_id, name
-            FROM Games
-            WHERE
-                guild_id = $1
-                AND author_id = $2
-                AND (
-                    name ILIKE $3
-                    OR abbreviation ILIKE $3
-                )
-            LIMIT 25;
-            """,
-            ctx.guild_id,
-            ctx.user.id,
-            f"{option.value}%",
-        )
+        assert ctx.member is not None
+        perms = toolbox.members.calculate_permissions(ctx.member)
+        if (perms & hikari.Permissions.MANAGE_GUILD) == hikari.Permissions.MANAGE_GUILD:
+            results = await conn.fetch(
+                """
+                SELECT
+                    game_id, name
+                FROM Games
+                WHERE
+                    guild_id = $1
+                    AND (
+                        name ILIKE $2
+                        OR abbreviation ILIKE $2
+                    )
+                LIMIT 25;
+                """,
+                ctx.guild_id,
+                f"{option.value}%",
+            )
+        else:
+            results = await conn.fetch(
+                """
+                SELECT
+                    game_id, name
+                FROM Games
+                WHERE
+                    guild_id = $1
+                    AND author_id = $3
+                    AND (
+                        name ILIKE $2
+                        OR abbreviation ILIKE $2
+                    )
+                LIMIT 25;
+                """,
+                ctx.guild_id,
+                f"{option.value}%",
+                ctx.user.id,
+            )
 
         return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
 

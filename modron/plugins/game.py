@@ -7,6 +7,7 @@ import typing
 import crescent
 import flare
 import hikari
+import toolbox
 
 from modron.exceptions import (
     AutocompleteSelectError,
@@ -24,6 +25,8 @@ if typing.TYPE_CHECKING:
     Plugin = crescent.Plugin[hikari.GatewayBot, Model]
 else:
     Plugin = crescent.Plugin[hikari.GatewayBot, None]
+
+MANAGE_GAME_PERMISSIONS = hikari.Permissions.MANAGE_GUILD
 
 plugin = Plugin()
 game = crescent.Group(
@@ -43,9 +46,13 @@ SignatureT = typing.Callable[[AuthorAwareT, flare.MessageContext], typing.Corout
 
 def only_author(f: SignatureT[AuthorAwareT]):
     async def inner(self: AuthorAwareT, ctx: flare.MessageContext) -> None:
-        if ctx.user.id != self.author_id:
-            raise EditPermissionError("Game")
-        return await f(self, ctx)
+        assert ctx.member is not None
+        perms = toolbox.members.calculate_permissions(ctx.member)
+        if (perms & MANAGE_GAME_PERMISSIONS) == MANAGE_GAME_PERMISSIONS:
+            return await f(self, ctx)
+        if ctx.user.id == self.author_id:
+            return await f(self, ctx)
+        raise EditPermissionError("Game")
 
     return inner
 
@@ -776,7 +783,7 @@ class GameDelete:
     name = crescent.option(
         str,
         "the name of the game",
-        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_owned(ctx, option),
+        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_editable(ctx, option),
     )
 
     async def callback(self, ctx: GuildContext) -> None:
@@ -798,7 +805,7 @@ class GameSettings:
     name = crescent.option(
         str,
         "the name of the game",
-        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_owned(ctx, option),
+        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_editable(ctx, option),
     )
 
     async def callback(self, ctx: GuildContext) -> None:
