@@ -69,7 +69,7 @@ async def settings_view(game: Game) -> Response:
         "components": await asyncio.gather(
             flare.Row(
                 SwitchView.make("manage_details", game.game_id, game.author_id).set_label("Game Details"),
-                SwitchView.make("manage_connections_main", game.game_id, game.author_id).set_label(
+                SwitchView.make("manage_connections", game.game_id, game.author_id, extra="main").set_label(
                     "Connected Role/Channels"
                 ),
                 SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Player Settings"),
@@ -186,30 +186,26 @@ async def add_players_view(game: Game) -> Response:
     }
 
 
-async def manage_players_view(game: Game) -> Response:
+async def manage_players_view(selected: hikari.Snowflake | None, game: Game) -> Response:
+    buttons: list[flare.Button] = [SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Back")]
+
+    if selected is not None:
+        buttons.append(RemovePlayerButton.make(game.game_id, game.author_id, selected))
+
     return {
         "content": None,
         "embeds": [await plugin.model.render.game(game, players=True)],
         "components": await asyncio.gather(
             flare.Row(
-                SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Back"),
+                await ManagePlayerSelect.make(game, selected),
             ),
+            flare.Row(*buttons),
         ),
     }
 
 
 ViewName = typing.Literal[
-    "settings",
-    "add_players",
-    "player_settings",
-    "manage_players",
-    "manage_details",
-    "manage_connections_main",
-    "manage_connections_info",
-    "manage_connections_synopsis",
-    "manage_connections_voice",
-    "manage_connections_category",
-    "manage_connections_role",
+    "settings", "add_players", "player_settings", "manage_players", "manage_details", "manage_connections"
 ]
 
 
@@ -217,10 +213,11 @@ class SwitchView(flare.Button):
     game_id: int
     author_id: int
     view: ViewName
+    extra: str
 
     @classmethod
-    def make(cls, view: ViewName, game_id: int, author_id: int) -> typing.Self:
-        return cls(game_id, author_id, view)
+    def make(cls, view: ViewName, game_id: int, author_id: int, *, extra: str = "") -> typing.Self:
+        return cls(game_id, author_id, view, extra)
 
     @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -236,21 +233,14 @@ class SwitchView(flare.Button):
             case "player_settings":
                 v = players_settings_view
             case "manage_players":
-                v = manage_players_view
+                if self.extra:
+                    v = functools.partial(manage_players_view, hikari.Snowflake(self.extra))
+                else:
+                    v = functools.partial(manage_players_view, None)
             case "manage_details":
                 v = manage_details_view
-            case "manage_connections_main":
-                v = functools.partial(manage_connections_view, "main")
-            case "manage_connections_info":
-                v = functools.partial(manage_connections_view, "info")
-            case "manage_connections_synopsis":
-                v = functools.partial(manage_connections_view, "synopsis")
-            case "manage_connections_voice":
-                v = functools.partial(manage_connections_view, "voice")
-            case "manage_connections_category":
-                v = functools.partial(manage_connections_view, "category")
-            case "manage_connections_role":
-                v = functools.partial(manage_connections_view, "role")
+            case "manage_connections":
+                v = functools.partial(manage_connections_view, typing.cast(ConnectionKind, self.extra))
 
         await ctx.edit_response(
             **await v(game),
@@ -393,11 +383,7 @@ class AddPlayerSelect(flare.UserSelect, min_values=1, max_values=25, placeholder
     author_id: int
 
     @classmethod
-    def make(
-        cls,
-        game_id: int,
-        author_id: int,
-    ) -> typing.Self:
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
         return cls(game_id, author_id)
 
     @only_author
@@ -414,6 +400,65 @@ class AddPlayerSelect(flare.UserSelect, min_values=1, max_values=25, placeholder
 
         await ctx.edit_response(
             **await players_settings_view(game),
+        )
+
+
+class ManagePlayerSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Select Player to manage"):
+    game_id: int
+    author_id: int
+
+    @classmethod
+    async def make(cls, game: Game, selected: hikari.Snowflake | None) -> typing.Self:
+        options: list[hikari.SelectMenuOption] = []
+        for player in game.players:
+            member = plugin.app.cache.get_member(game.guild_id, player.user_id) or await plugin.app.rest.fetch_member(
+                game.guild_id, player.user_id
+            )
+            character = game.get_character_for(player)
+            options.append(
+                hikari.SelectMenuOption(
+                    label=member.display_name,
+                    value=str(player.user_id),
+                    description=character.name if character is not None else None,
+                    emoji=None,
+                    is_default=player.user_id == selected,
+                )
+            )
+
+        return cls(game.game_id, game.author_id).set_options(*options)
+
+    @only_author
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        assert ctx.guild_id is not None
+
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        await ctx.edit_response(
+            **await manage_players_view(hikari.Snowflake(ctx.values[0]), game),
+        )
+
+
+class RemovePlayerButton(flare.Button, label="Remove Player", style=hikari.ButtonStyle.DANGER):
+    game_id: int
+    author_id: int
+    player_id: int
+
+    @classmethod
+    def make(cls, game_id: int, author_id: int, player_id: int) -> typing.Self:
+        return cls(game_id, author_id, player_id)
+
+    @only_author
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        assert ctx.guild_id is not None
+
+        await ctx.defer()
+
+        await plugin.model.players.delete(game_id=self.game_id, user_id=self.player_id)
+
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        await ctx.edit_response(
+            **await manage_players_view(None, game),
         )
 
 
