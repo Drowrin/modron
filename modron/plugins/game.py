@@ -7,7 +7,13 @@ import crescent
 import flare
 import hikari
 
-from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotFoundError
+from modron.exceptions import (
+    AutocompleteSelectError,
+    ConfirmationError,
+    EditPermissionError,
+    ModronError,
+    NotFoundError,
+)
 from modron.models import Game, GameLite, GameStatus, Response
 from modron.utils import GuildContext
 
@@ -56,36 +62,29 @@ async def settings_view(game: Game) -> Response:
         "content": None,
         "embeds": [await game.embed(abbreviation=True, description=True, guild_resources=True, players=True)],
         "components": await asyncio.gather(
-            # TODO: consolidate these buttons into "Discord Links", "Players", "Game Details"
-            # TODO: remove delete button and use a command?
             flare.Row(
-                ManageChannelsButton.make(game.game_id, game.author_id),
-                EditStatusButton.make(game.game_id, game.author_id),
-                RoleButton.make(game.game_id, game.author_id, game.role_id),
-                ToggleSeekingPlayers.make(game.game_id, game.author_id, game.seeking_players),
-                AddUsersButton.make(game.game_id, game.author_id),
-            ),
-            flare.Row(
-                EditButton.make(game.game_id, game.author_id),
+                DetailsMenuButton.make(game.game_id, game.author_id),
+                ConnectionsMenuButton.make(game.game_id, game.author_id),
+                PlayersMenuButton.make(game.game_id, game.author_id),
             ),
         ),
     }
 
 
-async def status_settings_view(game: Game) -> Response:
+async def manage_details_view(game: Game) -> Response:
     return {
         "content": None,
-        "embeds": [await game.embed()],
+        "embeds": [await game.embed(abbreviation=True, description=True)],
         "components": await asyncio.gather(
             flare.Row(StatusSelect.make(game.game_id, game.author_id, game.status)),
-            flare.Row(BackButton.make(game.game_id, game.author_id)),
+            flare.Row(EditButton.make(game.game_id, game.author_id), BackButton.make(game.game_id, game.author_id)),
         ),
     }
 
 
-def get_kind_overwrites(game: GameLite, kind: ChannelKind) -> typing.Sequence[hikari.PermissionOverwrite]:
+def get_kind_overwrites(game: GameLite, kind: ConnectionKind) -> typing.Sequence[hikari.PermissionOverwrite]:
     match kind:
-        case "main":
+        case "main" | "role":
             return []
         case "info" | "synopsis":
             return game.read_only_overwrites()
@@ -111,7 +110,7 @@ def overwrite_to_text(overwrite: hikari.PermissionOverwrite, guild_id: hikari.Sn
     return f"{name}\n{description}"
 
 
-async def channel_settings_view(game: Game, kind: ChannelKind) -> Response:
+async def manage_connections_view(game: Game, kind: ConnectionKind) -> Response:
     overwrites = get_kind_overwrites(game, kind)
 
     embeds = [await game.embed(guild_resources=True)]
@@ -132,38 +131,48 @@ async def channel_settings_view(game: Game, kind: ChannelKind) -> Response:
             )
         )
 
+    match kind:
+        case "role":
+            select = GameRoleSelect.make(game.game_id, game.author_id)
+        case _:
+            select = GameChannelSelect.make(game.game_id, game.author_id, kind)
+
     return {
         "content": None,
         "embeds": embeds,
         "components": await asyncio.gather(
-            flare.Row(ChannelKindSelect.make(game.game_id, game.author_id, kind)),
-            flare.Row(GameChannelSelect.make(game.game_id, game.author_id, kind)),
+            flare.Row(ConnectionKindSelect.make(game.game_id, game.author_id, kind)),
+            flare.Row(select),
             flare.Row(*buttons),
         ),
     }
 
 
-async def add_users_view(game: Game) -> Response:
+async def manage_players_view(game: Game) -> Response:
     return {
         "content": None,
         "embeds": [await game.embed(players=True)],
         "components": await asyncio.gather(
             flare.Row(UserSelect.make(game.game_id, game.author_id)),
-            flare.Row(BackButton.make(game.game_id, game.author_id)),
+            flare.Row(
+                ToggleSeekingPlayers.make(game.game_id, game.author_id, game.seeking_players),
+                BackButton.make(game.game_id, game.author_id),
+            ),
         ),
     }
 
 
 ChannelKind = typing.Literal["main", "info", "synopsis", "voice", "category"]
+ConnectionKind = typing.Literal["role"] | ChannelKind
 
 
-class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
+class ConnectionKindSelect(flare.TextSelect, min_values=1, max_values=1):
     game_id: int
     author_id: int
-    kind: ChannelKind
+    kind: ConnectionKind
 
     @classmethod
-    def make(cls, game_id: int, author_id: int, kind: ChannelKind) -> typing.Self:
+    def make(cls, game_id: int, author_id: int, kind: ConnectionKind) -> typing.Self:
         return cls(game_id, author_id, kind).set_options(
             hikari.SelectMenuOption(
                 label="Main Channel",
@@ -194,6 +203,13 @@ class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
                 is_default=kind == "voice",
             ),
             hikari.SelectMenuOption(
+                label="Role",
+                value="role",
+                description="the role that will be assigned to all players",
+                emoji=None,
+                is_default=kind == "role",
+            ),
+            hikari.SelectMenuOption(
                 label="Category",
                 value="category",
                 description="the category that contains other channels related to this game",
@@ -209,7 +225,7 @@ class ChannelKindSelect(flare.TextSelect, min_values=1, max_values=1):
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await channel_settings_view(game, typing.cast(ChannelKind, ctx.values[0])),
+            **await manage_connections_view(game, typing.cast(ConnectionKind, ctx.values[0])),
         )
 
 
@@ -246,7 +262,34 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await channel_settings_view(game, self.kind),
+            **await manage_connections_view(game, self.kind),
+        )
+
+
+class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, max_values=1):
+    game_id: int
+    author_id: int
+
+    @classmethod
+    def make(cls, game_id: int, author_id: int) -> typing.Self:
+        return cls(game_id, author_id)
+
+    @only_author
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        assert ctx.guild_id is not None
+
+        await ctx.defer()
+        await plugin.model.games.update(
+            game_id=self.game_id,
+            guild_id=ctx.guild_id,
+            author_id=ctx.user.id,
+            role_id=next((c.id for c in ctx.roles), None),
+        )
+
+        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
+
+        await ctx.edit_response(
+            **await manage_connections_view(game, "role"),
         )
 
 
@@ -275,7 +318,7 @@ class UserSelect(flare.UserSelect, min_values=1, max_values=25, placeholder="Sel
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await add_users_view(game),
+            **await manage_players_view(game),
         )
 
 
@@ -311,17 +354,17 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await status_settings_view(game),
+            **await manage_details_view(game),
         )
 
 
-class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
+class ConnectionsMenuButton(flare.Button, label="Connected Role/Channels"):
     game_id: int
     author_id: int
 
     @classmethod
     def make(cls, game_id: int, author_id: int) -> typing.Self:
-        return cls(game_id, author_id).set_label("Manage Channels")
+        return cls(game_id, author_id)
 
     @only_author
     async def callback(self, ctx: flare.MessageContext) -> None:
@@ -330,17 +373,17 @@ class ManageChannelsButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await channel_settings_view(game, "main"),
+            **await manage_connections_view(game, "main"),
         )
 
 
 class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.ButtonStyle.SECONDARY):
     game_id: int
     author_id: int
-    kind: ChannelKind
+    kind: ConnectionKind
 
     @classmethod
-    def make(cls, game_id: int, author_id: int, kind: ChannelKind) -> typing.Self:
+    def make(cls, game_id: int, author_id: int, kind: ConnectionKind) -> typing.Self:
         return cls(game_id, author_id, kind)
 
     @only_author
@@ -360,6 +403,9 @@ class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.But
                 channel_id = game.voice_channel_id
             case "category":
                 channel_id = game.category_channel_id
+            case "role":
+                # we shouldn't get here
+                raise ModronError("Can't apply permission overwrites to a role!")
 
         if channel_id is None:
             raise NotFoundError(f"{self.kind.capitalize()} Channel")
@@ -371,7 +417,7 @@ class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.But
         await response.delete()
 
 
-class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle.SECONDARY):
+class PlayersMenuButton(flare.Button, label="Player Settings"):
     game_id: int
     author_id: int
 
@@ -386,11 +432,11 @@ class AddUsersButton(flare.Button, label="Add Players", style=hikari.ButtonStyle
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await add_users_view(game),
+            **await manage_players_view(game),
         )
 
 
-class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonStyle.SECONDARY):
+class DetailsMenuButton(flare.Button, label="Game Details"):
     game_id: int
     author_id: int
 
@@ -405,7 +451,7 @@ class EditStatusButton(flare.Button, label="Change Status", style=hikari.ButtonS
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
         await ctx.edit_response(
-            **await status_settings_view(game),
+            **await manage_details_view(game),
         )
 
 
@@ -454,39 +500,7 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
         await ctx.edit_response(**await settings_view(game))
 
 
-class RoleButton(flare.Button, style=hikari.ButtonStyle.SECONDARY):
-    game_id: int
-    author_id: int
-    role_id: int | None
-
-    @classmethod
-    def make(cls, game_id: int, author_id: int, role_id: int | None) -> typing.Self:
-        return cls(game_id, author_id, role_id).set_label("Unlink Role" if role_id is not None else "Create Role")
-
-    @only_author
-    async def callback(self, ctx: flare.MessageContext):
-        assert ctx.guild_id is not None
-
-        if self.role_id is None:
-            game_lite = await plugin.model.games.get_lite(game_id=self.game_id, guild_id=ctx.guild_id)
-            role = await game_lite.create_role()
-            role_id = role.id
-        else:
-            role_id = None
-
-        await plugin.model.games.update(
-            game_id=self.game_id,
-            guild_id=ctx.guild_id,
-            author_id=self.author_id,
-            role_id=role_id,
-        )
-
-        game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
-
-        await ctx.edit_response(**await settings_view(game))
-
-
-class EditButton(flare.Button, label="Edit Details"):
+class EditButton(flare.Button, label="Edit Text", style=hikari.ButtonStyle.SECONDARY):
     game_id: int
     author_id: int
 
@@ -623,7 +637,7 @@ class GameEditModal(flare.Modal, title="Edit Game"):
         )
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
-        await ctx.edit_response(**await settings_view(game))
+        await ctx.edit_response(**await manage_details_view(game))
 
 
 class GameDeleteModal(flare.Modal, title="Game Delete Confirmation"):

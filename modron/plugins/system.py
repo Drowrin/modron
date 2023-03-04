@@ -111,7 +111,7 @@ class BackButton(flare.Button, label="Back"):
         )
 
 
-class EmojiButton(flare.Button, label="Set Emoji", style=hikari.ButtonStyle.SECONDARY):
+class EmojiButton(flare.Button, label="Set Emoji"):
     system_id: int
     timeout: int
 
