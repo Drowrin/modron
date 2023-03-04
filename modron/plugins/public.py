@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import typing
 
 import crescent
@@ -76,5 +77,67 @@ class GameInfo:
         game = await plugin.model.games.get(game_id=game_id, guild_id=ctx.guild_id)
 
         await ctx.respond(
-            embed=await plugin.model.render.game(game, description=True, guild_resources=True)
+            embed=await plugin.model.render.game(game, description=True, guild_resources=True, players=True)
+        )
+
+
+@plugin.include
+@crescent.command(name="join", description="join a game in this server", dm_enabled=False)
+class JoinGame:
+    name = crescent.option(
+        str,
+        "the name of the game",
+        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_joinable(ctx, option),
+    )
+
+    async def callback(self, ctx: GuildContext) -> None:
+        try:
+            game_id = int(self.name)
+        except ValueError as err:
+            raise AutocompleteSelectError() from err
+        else:
+            if not await plugin.model.games.id_exists(game_id=game_id, guild_id=ctx.guild_id):
+                raise AutocompleteSelectError()
+
+        await ctx.defer(ephemeral=True)
+
+        game, _ = await asyncio.gather(
+            plugin.model.games.get_lite(game_id=game_id, guild_id=ctx.guild_id),
+            plugin.model.players.insert(user_id=ctx.user.id, game_id=game_id),
+        )
+
+        await ctx.respond(
+            content=f"Successfully joined {game.name}!",
+            flags=hikari.MessageFlag.EPHEMERAL,
+        )
+
+
+@plugin.include
+@crescent.command(name="leave", description="leave a game in this server", dm_enabled=False)
+class LeaveGame:
+    name = crescent.option(
+        str,
+        "the name of the game",
+        autocomplete=lambda ctx, option: plugin.model.games.autocomplete_joined(ctx, option),
+    )
+
+    async def callback(self, ctx: GuildContext) -> None:
+        try:
+            game_id = int(self.name)
+        except ValueError as err:
+            raise AutocompleteSelectError() from err
+        else:
+            if not await plugin.model.games.id_exists(game_id=game_id, guild_id=ctx.guild_id):
+                raise AutocompleteSelectError()
+
+        await ctx.defer(ephemeral=True)
+
+        game, _ = await asyncio.gather(
+            plugin.model.games.get_lite(game_id=game_id, guild_id=ctx.guild_id),
+            plugin.model.players.delete(user_id=ctx.user.id, game_id=game_id),
+        )
+
+        await ctx.respond(
+            content=f"Successfully left {game.name}!",
+            flags=hikari.MessageFlag.EPHEMERAL,
         )
