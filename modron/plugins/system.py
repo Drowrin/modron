@@ -132,10 +132,13 @@ class EmojiButton(flare.Button, label="Set Emoji", emoji="🎨"):
                 timeout=self.timeout,
                 predicate=lambda e: e.message_id == message.id and e.user_id == ctx.user.id,
             )
-        except asyncio.TimeoutError:
+        except (asyncio.TimeoutError, asyncio.CancelledError):
             return
         finally:
-            await response.delete()
+            try:
+                await response.delete()
+            except (hikari.NotFoundError, hikari.ComponentStateConflictError):
+                pass
 
         await plugin.model.systems.update(
             system_id=self.system_id,
