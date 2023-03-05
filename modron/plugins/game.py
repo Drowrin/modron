@@ -59,8 +59,8 @@ def only_author(f: SignatureT[AuthorAwareT]):
 
 async def settings_view(member: hikari.Member, game: Game) -> Response:
     buttons: list[flare.Button] = [
-        SwitchView.make("manage_details", game.game_id, game.author_id).set_label("Game Details"),
-        SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Player Settings"),
+        SwitchView.make("manage_details", game.game_id, game.author_id).set_label("Game Details").set_emoji("📄"),
+        SwitchView.make("player_settings", game.game_id, game.author_id).set_label("Player Settings").set_emoji("👥"),
     ]
 
     perms = toolbox.members.calculate_permissions(member)
@@ -71,7 +71,9 @@ async def settings_view(member: hikari.Member, game: Game) -> Response:
                 game.game_id,
                 game.author_id,
                 extra="main",
-            ).set_label("Connected Role/Channels")
+            )
+            .set_label("Connected Role/Channels")
+            .set_emoji("🔗")
         )
 
     return {
@@ -174,10 +176,14 @@ async def players_settings_view(game: Game) -> Response:
         "components": await asyncio.gather(
             flare.Row(
                 ToggleSeekingPlayers.make(game.game_id, game.author_id, game.seeking_players),
-                SwitchView.make("add_players", game.game_id, game.author_id).set_label("Add Players"),
-                SwitchView.make("manage_players", game.game_id, game.author_id).set_label("Manage Players"),
-                SwitchView.make("settings", game.game_id, game.author_id).set_label("Back"),
+                SwitchView.make("add_players", game.game_id, game.author_id).set_label("Add Players").set_emoji("➕"),
+                SwitchView.make("manage_players", game.game_id, game.author_id)
+                .set_label("Manage Players")
+                .set_emoji("🔧"),
             ),
+            flare.Row(
+                SwitchView.make("settings", game.game_id, game.author_id).set_label("Back"),
+            )
         ),
     }
 
@@ -218,7 +224,7 @@ ViewName = typing.Literal[
 ]
 
 
-class SwitchView(flare.Button):
+class SwitchView(flare.Button, style=hikari.ButtonStyle.SECONDARY):
     game_id: int
     author_id: int
     view: ViewName
@@ -533,7 +539,7 @@ class StatusSelect(flare.TextSelect, min_values=1, max_values=1, placeholder="Ch
         )
 
 
-class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.ButtonStyle.SECONDARY):
+class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.ButtonStyle.PRIMARY):
     game_id: int
     author_id: int
     kind: ConnectionKind
@@ -573,15 +579,17 @@ class OverwritesButton(flare.Button, label="Apply Permissions", style=hikari.But
         await response.delete()
 
 
-class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
+class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.PRIMARY):
     game_id: int
     author_id: int
     seeking_players: bool
 
     @classmethod
     def make(cls, game_id: int, author_id: int, seeking_players: bool) -> typing.Self:
-        return cls(game_id, author_id, seeking_players).set_label(
-            "Stop Seeking Players" if seeking_players else "Start Seeking Players"
+        return (
+            cls(game_id, author_id, seeking_players)
+            .set_label("Stop Seeking Players" if seeking_players else "Start Seeking Players")
+            .set_emoji("⛔" if seeking_players else "🪧")
         )
 
     @only_author
@@ -599,7 +607,7 @@ class ToggleSeekingPlayers(flare.Button, style=hikari.ButtonStyle.SECONDARY):
         await ctx.edit_response(**await players_settings_view(game))
 
 
-class EditButton(flare.Button, label="Edit Text", style=hikari.ButtonStyle.SECONDARY):
+class EditButton(flare.Button, label="Edit Text", style=hikari.ButtonStyle.PRIMARY, emoji="📄"):
     game_id: int
     author_id: int
 

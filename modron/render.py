@@ -85,7 +85,7 @@ class Renderer:
             embed.description = f"Abbreviated as `{game.abbreviation}`"
 
         if game.system is not None:
-            embed.add_field("System", game.system.abbreviation, inline=True)
+            embed.add_field("System", f"{game.system.emoji} {game.system.abbreviation}", inline=True)
 
         embed.add_field("Status", game.status_str, inline=True)
         embed.add_field(
