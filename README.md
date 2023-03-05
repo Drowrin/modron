@@ -72,4 +72,4 @@ nox -s fixes
 
 ## Thanks
 
-This project is powered by the *awesome projects* [Hikari](https://github.com/hikari-py/hikari), [Crescent](https://github.com/magpie-dev/hikari-crescent), and [Flare](https://github.com/brazier-dev/hikari-flare).
+This project is powered by the *awesome projects* [Hikari](https://github.com/hikari-py/hikari), [Crescent](https://github.com/magpie-dev/hikari-crescent), [Flare](https://github.com/brazier-dev/hikari-flare), and [hikari-toolbox](https://github.com/brazier-dev/hikari-toolbox).
