@@ -109,7 +109,7 @@ class BackButton(flare.Button, label="Back"):
         )
 
 
-class EmojiButton(flare.Button, label="Set Emoji"):
+class EmojiButton(flare.Button, label="Set Emoji", emoji="🎨"):
     system_id: int
     timeout: int
 
@@ -150,7 +150,7 @@ class EmojiButton(flare.Button, label="Set Emoji"):
         await ctx.interaction.edit_message(old_message, **await settings_view(system))
 
 
-class EditButton(flare.Button, label="Edit Details"):
+class EditButton(flare.Button, label="Edit Details", emoji="📄"):
     system_id: int
 
     @classmethod
