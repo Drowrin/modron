@@ -183,7 +183,7 @@ async def players_settings_view(game: Game) -> Response:
             ),
             flare.Row(
                 SwitchView.make("settings", game.game_id, game.author_id).set_label("Back"),
-            )
+            ),
         ),
     }
 
