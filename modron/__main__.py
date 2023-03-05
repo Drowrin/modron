@@ -8,6 +8,8 @@ import flare
 import hikari
 
 from modron.config import Config
+from modron.exceptions import ModronError
+from modron.model import Model
 
 # CLI args
 parser = argparse.ArgumentParser(prog="Modron", description="CLI for running the Modron discord bot")
@@ -26,14 +28,54 @@ if os.name != "nt":
 if not args.config.exists() or not args.config.is_file():
     sys.exit(f"config path {str(args.config)} does not point to a file")
 
-# load config and initialize bot
+# load config
 config = Config.load(args.config)
+
+# create global model
+model = Model(config)
+
+# initialize bot, plugins, and hikari extension libraries
 bot = hikari.GatewayBot(
     token=config.discord_token,
 )
 flare.install(bot)
-client = crescent.Client(bot)
+client = crescent.Client(bot, model=model)
 client.plugins.load_folder("modron.plugins")
+
+
+@bot.listen()
+async def on_start(_: hikari.StartingEvent) -> None:
+    """
+    While the bot is starting, initialize async resources such as database connections.
+    """
+    await model.start(bot.rest)
+
+
+@bot.listen(hikari.ExceptionEvent)
+async def on_modron_error(event: hikari.ExceptionEvent[hikari.Event]):
+    """
+    If an error is raised that the bot can report to the user, report it to the user.
+    Otherwise, rereaise the exception.
+    """
+    if not isinstance(event.exception, ModronError) or not isinstance(
+        event.failed_event, hikari.InteractionCreateEvent
+    ):
+        raise event.exception
+
+    interaction = event.failed_event.interaction
+    await event.app.rest.create_interaction_response(
+        interaction,
+        interaction.token,
+        hikari.ResponseType.MESSAGE_CREATE,
+        **event.exception.to_response_args(),
+    )
+
+
+@client.include
+@crescent.catch_command(ModronError)
+async def on_modron_command_error(exc: ModronError, ctx: crescent.Context) -> None:
+    await ctx.respond(**exc.to_response_args(), ephemeral=True)
+
 
 # run forever
 bot.run()

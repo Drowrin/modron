@@ -19,7 +19,7 @@ This project is currently very early in development.
   - Anonymous posting and messaging options
   - Unlimited feedback channels per guild, allowing you to organize by whatever categories you need
   - Completely stateless--nothing from this feature is cached or stored by the bot
-- [ ] Game management
+- [x] Game management
   - Display information on each game in a server
   - Provide an interface to edit game details and settings
   - Creation and management of categories, channels, and roles
@@ -41,9 +41,6 @@ This project is currently very early in development.
   - Ready Check
     - Ping participants of a game ahead of time
     - Gather responses from participants
-      - Yes
-      - Yes, but `<user input>`
-      - No, because `<user input>`
     - Show results at a glance
 
 ## Development

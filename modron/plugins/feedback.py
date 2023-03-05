@@ -1,12 +1,20 @@
 import asyncio
+import typing
 
 import crescent
 import flare
 import hikari
 
-from modron.utils import get_me
+from modron.utils import GuildContext, get_me
 
-plugin = crescent.Plugin[hikari.GatewayBot, None]()
+if typing.TYPE_CHECKING:
+    from modron.model import Model
+
+    Plugin = crescent.Plugin[hikari.GatewayBot, Model]
+else:
+    Plugin = crescent.Plugin[hikari.GatewayBot, None]
+
+plugin = Plugin()
 feedback = crescent.Group(
     "feedback",
     "feedback channel management",
@@ -47,7 +55,6 @@ class AnonymousMessageModal(flare.Modal, title="Send Anonymous Message"):
     content: flare.TextInput = flare.TextInput(
         label="Message Content",
         style=hikari.TextInputStyle.PARAGRAPH,
-        min_length=1,
         max_length=4000,
         required=True,
         placeholder="This message will be sent to the channel anonymously!",
@@ -178,7 +185,6 @@ class FeedbackModal(flare.Modal, title="Send Feedback"):
     name: flare.TextInput = flare.TextInput(
         label="Title",
         style=hikari.TextInputStyle.SHORT,
-        min_length=1,
         max_length=100,
         required=True,
         placeholder="The title of the thread.",
@@ -187,7 +193,6 @@ class FeedbackModal(flare.Modal, title="Send Feedback"):
     content: flare.TextInput = flare.TextInput(
         label="Content",
         style=hikari.TextInputStyle.PARAGRAPH,
-        min_length=1,
         max_length=4000,
         required=True,
         placeholder="The content of the feedback message you want to send.",
@@ -330,7 +335,7 @@ class FeedbackStart:
         default=True,
     )
 
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         # immediately defer with an ephemeral message so that the response is above the menu
         await ctx.defer(ephemeral=True)
 
@@ -379,7 +384,7 @@ class FeedbackStart:
 @feedback.child
 @crescent.command(name="stop", description="convert this channel back into a regular channel")
 class FeedbackStop:
-    async def callback(self, ctx: crescent.Context) -> None:
+    async def callback(self, ctx: GuildContext) -> None:
         # this command can only be used in guilds, as set in the `feedback` crescent.Group above
         assert ctx.guild_id is not None
 
