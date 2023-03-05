@@ -117,7 +117,14 @@ class Renderer:
                 embed.add_field("Category", f"<#{game.category_channel_id}>", inline=True)
 
         if players and isinstance(game, Game) and len(game.players) > 0:
-            embed.add_field("Players", " ".join(f"<@{p.user_id}>" for p in game.players))
+            embed.add_field(
+                "Players",
+                (
+                    f"{game.author_label}: <@{game.author_id}>\n"
+                    + f"{game.player_label}:"
+                    + " ".join(f"<@{p.user_id}>" for p in game.players)
+                ),
+            )
 
         return embed
 
