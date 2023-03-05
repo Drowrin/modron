@@ -75,10 +75,20 @@ async def emoji_settings_view(system_id: int, seconds: int) -> Response:
         ],
         "components": await asyncio.gather(
             flare.Row(
-                BackButton.make(system_id),
+                CancelButton.make(),
             ),
         ),
     }
+
+
+class CancelButton(flare.Button, label="Cancel"):
+    @classmethod
+    def make(cls) -> typing.Self:
+        return cls()
+
+    @require_permissions
+    async def callback(self, ctx: flare.MessageContext) -> None:
+        await ctx.message.delete()
 
 
 class BackButton(flare.Button, label="Back"):
