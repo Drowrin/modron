@@ -308,3 +308,37 @@ class GameDB(DBConn):
         )
 
         return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
+    
+    @with_conn
+    async def autocomplete_involved(
+        self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
+    ) -> list[hikari.CommandChoice]:
+        results = await conn.fetch(
+            """
+            SELECT
+                g.game_id, g.name
+            FROM Games AS g
+            WHERE
+                g.guild_id = $1
+                AND (
+                    g.author_id = $2
+                    OR EXISTS (
+                        SELECT 1
+                        FROM Players AS p
+                        WHERE
+                            p.game_id = g.game_id
+                            AND p.user_id = $2
+                    )
+                )
+                AND (
+                    g.name ILIKE $3
+                    OR g.abbreviation ILIKE $3
+                )
+            LIMIT 25;
+            """,
+            ctx.guild_id,
+            ctx.user.id,
+            f"{option.value}%",
+        )
+
+        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
