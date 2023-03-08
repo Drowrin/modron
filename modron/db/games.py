@@ -292,10 +292,15 @@ class GameDB(DBConn):
             SELECT
                 g.game_id, g.name
             FROM Games AS g
-            INNER JOIN Players AS p USING (game_id)
             WHERE
                 g.guild_id = $1
-                AND p.user_id = $2
+                AND EXISTS (
+                    SELECT NULL
+                    FROM Players AS p
+                    WHERE
+                        p.game_id = g.game_id
+                        AND p.user_id = $2
+                )
                 AND (
                     g.name ILIKE $3
                     OR g.abbreviation ILIKE $3
