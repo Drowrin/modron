@@ -1,22 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import typing
 
 import crescent
 import hikari
 
 from modron.exceptions import AutocompleteSelectError
+from modron.model import ModronPlugin
 from modron.utils import GuildContext
 
-if typing.TYPE_CHECKING:
-    from modron.model import Model
-
-    Plugin = crescent.Plugin[hikari.GatewayBot, Model]
-else:
-    Plugin = crescent.Plugin[hikari.GatewayBot, None]
-
-plugin = Plugin()
+plugin = ModronPlugin()
 
 info = crescent.Group(
     "info",

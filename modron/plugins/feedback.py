@@ -1,20 +1,13 @@
 import asyncio
-import typing
 
 import crescent
 import flare
 import hikari
 
+from modron.model import ModronPlugin
 from modron.utils import GuildContext, get_me
 
-if typing.TYPE_CHECKING:
-    from modron.model import Model
-
-    Plugin = crescent.Plugin[hikari.GatewayBot, Model]
-else:
-    Plugin = crescent.Plugin[hikari.GatewayBot, None]
-
-plugin = Plugin()
+plugin = ModronPlugin()
 feedback = crescent.Group(
     "feedback",
     "feedback channel management",

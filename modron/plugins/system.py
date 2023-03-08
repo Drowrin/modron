@@ -10,19 +10,13 @@ import hikari
 import toolbox
 
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotUniqueError
+from modron.model import ModronPlugin
 from modron.models import SystemLite
 from modron.utils import GuildContext, Response
 
-if typing.TYPE_CHECKING:
-    from modron.model import Model
-
-    Plugin = crescent.Plugin[hikari.GatewayBot, Model]
-else:
-    Plugin = crescent.Plugin[hikari.GatewayBot, None]
-
 MANAGE_SYSTEM_PERMISSIONS = hikari.Permissions.MANAGE_GUILD
 
-plugin = Plugin()
+plugin = ModronPlugin()
 system = crescent.Group(
     "system",
     "system management",

@@ -16,19 +16,14 @@ from modron.exceptions import (
     ModronError,
     NotFoundError,
 )
+from modron.model import ModronPlugin
 from modron.models import Game, GameLite, GameStatus
 from modron.utils import GuildContext, Response
 
-if typing.TYPE_CHECKING:
-    from modron.model import Model
-
-    Plugin = crescent.Plugin[hikari.GatewayBot, Model]
-else:
-    Plugin = crescent.Plugin[hikari.GatewayBot, None]
-
 MANAGE_GAME_PERMISSIONS = hikari.Permissions.MANAGE_GUILD
 
-plugin = Plugin()
+
+plugin = ModronPlugin()
 game = crescent.Group(
     "game",
     "game management",
