@@ -16,9 +16,8 @@ from modron.exceptions import (
     ModronError,
     NotFoundError,
 )
-from modron.model import ModronPlugin
 from modron.models import Game, GameLite, GameStatus
-from modron.utils import GuildContext, Response
+from modron.utils import GuildContext, ModronPlugin, Response
 
 MANAGE_GAME_PERMISSIONS = hikari.Permissions.MANAGE_GUILD
 

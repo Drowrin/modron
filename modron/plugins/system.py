@@ -10,9 +10,8 @@ import hikari
 import toolbox
 
 from modron.exceptions import AutocompleteSelectError, ConfirmationError, EditPermissionError, NotUniqueError
-from modron.model import ModronPlugin
 from modron.models import SystemLite
-from modron.utils import GuildContext, Response
+from modron.utils import GuildContext, ModronPlugin, Response
 
 MANAGE_SYSTEM_PERMISSIONS = hikari.Permissions.MANAGE_GUILD
 

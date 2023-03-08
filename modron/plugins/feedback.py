@@ -4,8 +4,7 @@ import crescent
 import flare
 import hikari
 
-from modron.model import ModronPlugin
-from modron.utils import GuildContext, get_me
+from modron.utils import GuildContext, ModronPlugin, get_me
 
 plugin = ModronPlugin()
 feedback = crescent.Group(
