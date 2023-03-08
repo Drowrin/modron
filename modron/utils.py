@@ -3,6 +3,8 @@ import typing
 import crescent
 import hikari
 
+from modron.model import Model
+
 
 async def get_me(app: hikari.RESTAware) -> hikari.OwnUser:
     """
@@ -24,3 +26,7 @@ class Response(typing.TypedDict):
     content: hikari.UndefinedNoneOr[str]
     embeds: typing.Sequence[hikari.Embed]
     components: typing.Sequence[hikari.api.ComponentBuilder]
+
+
+class ModronPlugin(crescent.Plugin[hikari.GatewayBot, Model]):
+    ...

@@ -1,4 +1,3 @@
-import crescent
 import hikari
 
 from modron.config import Config
@@ -45,6 +44,3 @@ class Model:
 
     async def close(self) -> None:
         await self.db_pool.close()
-
-
-ModronPlugin = crescent.Plugin[hikari.GatewayBot, Model]
