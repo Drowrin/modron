@@ -8,13 +8,15 @@ from modron.config import Config
 from modron.model import Model
 
 ReturnT = typing.TypeVar("ReturnT")
+InjectedT = typing.TypeVar("InjectedT")
 SpecT = typing.ParamSpec("SpecT")
 SigT = typing.Callable[
-    typing.Concatenate[hikari.api.RESTClient, Model, SpecT], typing.Coroutine[typing.Any, typing.Any, ReturnT]
+    typing.Concatenate[hikari.api.RESTClient, InjectedT, SpecT], typing.Coroutine[typing.Any, typing.Any, ReturnT]
 ]
+OutSigT = typing.Callable[SpecT, typing.Coroutine[typing.Any, typing.Any, ReturnT]]
 
 
-def with_model(f: SigT[SpecT, ReturnT]) -> typing.Callable[SpecT, typing.Coroutine[typing.Any, typing.Any, ReturnT]]:
+def with_model(f: SigT[Model, SpecT, ReturnT]) -> OutSigT[SpecT, ReturnT]:
     @functools.wraps(f)
     async def inner(*args: SpecT.args, **kwargs: SpecT.kwargs) -> ReturnT:
         config = Config.load(Path("dev.config.yml"))
