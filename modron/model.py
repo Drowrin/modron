@@ -23,7 +23,7 @@ class Model:
         self.app_id: hikari.Snowflake
 
         self.render: Renderer
-        self.create: Fabricator
+        self.fab: Fabricator
 
     async def start(self, client: hikari.api.RESTClient, cache: hikari.api.Cache | None = None) -> None:
         self.db_pool = await connect(self.config.db_url)
@@ -40,7 +40,7 @@ class Model:
 
         self.render = Renderer(command_ids, client, cache)
 
-        self.create = Fabricator(self.app_id, self.games, client)
+        self.fab = Fabricator(self.app_id, self.games, client)
 
     async def close(self) -> None:
         await self.db_pool.close()

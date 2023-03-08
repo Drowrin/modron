@@ -108,11 +108,11 @@ def get_kind_overwrites(game: GameLite, kind: ConnectionKind) -> typing.Sequence
         case "main" | "role":
             return []
         case "info" | "synopsis":
-            return plugin.model.create.read_only_overwrites(game)
+            return plugin.model.fab.read_only_overwrites(game)
         case "voice":
-            return plugin.model.create.voice_overwrites(game)
+            return plugin.model.fab.voice_overwrites(game)
         case "category":
-            return plugin.model.create.category_overwrites(game)
+            return plugin.model.fab.category_overwrites(game)
 
 
 def overwrite_to_text(overwrite: hikari.PermissionOverwrite, guild_id: hikari.Snowflakeish) -> str:
@@ -397,7 +397,7 @@ class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, 
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
-        await plugin.model.create.remove_role(game)
+        await plugin.model.fab.remove_role(game)
 
         await plugin.model.games.update(
             game_id=self.game_id,
@@ -408,7 +408,7 @@ class GameRoleSelect(flare.RoleSelect, placeholder="Select role", min_values=0, 
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
-        await plugin.model.create.apply_role(game)
+        await plugin.model.fab.apply_role(game)
 
         await ctx.edit_response(
             **await manage_connections_view(ctx.member, "role", game),
@@ -435,7 +435,7 @@ class AddPlayerSelect(flare.UserSelect, min_values=1, max_values=25, placeholder
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
-        await plugin.model.create.apply_role(game)
+        await plugin.model.fab.apply_role(game)
 
         await ctx.edit_response(
             **await players_settings_view(game),
@@ -496,7 +496,7 @@ class RemovePlayerButton(flare.Button, label="Remove Player", style=hikari.Butto
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)
 
-        await plugin.model.create.remove_role_from(game, hikari.Snowflake(self.player_id))
+        await plugin.model.fab.remove_role_from(game, hikari.Snowflake(self.player_id))
 
         await ctx.edit_response(
             **await manage_players_view(None, game),
@@ -694,14 +694,14 @@ class GameCreateModal(flare.Modal, title="New Game"):
         )
 
         if self.auto_setup:
-            await plugin.model.create.full_setup(game_lite)
+            await plugin.model.fab.full_setup(game_lite)
 
         game = await plugin.model.games.get(
             game_id=game_lite.game_id,
             guild_id=ctx.guild_id,
         )
 
-        await plugin.model.create.apply_role(game)
+        await plugin.model.fab.apply_role(game)
 
         await ctx.respond(
             **await settings_view(ctx.member, game),
