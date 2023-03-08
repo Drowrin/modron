@@ -20,5 +20,16 @@ jobs:
       run: pip install -r requirements/nox.txt
     - name: lint
       run: nox -s lint
+  typecheck:
+    runs-on: ubuntu-latest
+    name: typecheck
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+    - name: Install Nox
+      run: pip install -r requirements/nox.txt
     - name: typecheck
       run: nox -s typecheck
