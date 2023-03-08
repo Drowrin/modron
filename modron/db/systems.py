@@ -92,7 +92,7 @@ class SystemDB(DBConn):
         return await conn.fetchval(
             """
             SELECT EXISTS(
-                SELECT 1
+                SELECT NULL
                 from Systems
                 WHERE
                     guild_id = $1
@@ -108,7 +108,7 @@ class SystemDB(DBConn):
         return await conn.fetchval(
             """
             SELECT EXISTS(
-                SELECT 1
+                SELECT NULL
                 from Systems
                 WHERE
                     guild_id = $1

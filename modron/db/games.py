@@ -84,7 +84,7 @@ class GameDB(DBConn):
         return await conn.fetchval(
             """
             SELECT EXISTS(
-                SELECT 1
+                SELECT NULL
                 from Games
                 WHERE
                     guild_id = $1
@@ -100,7 +100,7 @@ class GameDB(DBConn):
         return await conn.fetchval(
             """
             SELECT EXISTS(
-                SELECT 1
+                SELECT NULL
                 from Games
                 WHERE
                     guild_id = $1
@@ -328,7 +328,7 @@ class GameDB(DBConn):
                 AND (
                     g.author_id = $2
                     OR EXISTS (
-                        SELECT 1
+                        SELECT NULL
                         FROM Players AS p
                         WHERE
                             p.game_id = g.game_id
