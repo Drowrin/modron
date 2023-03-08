@@ -6,8 +6,7 @@ import crescent
 import hikari
 
 from modron.exceptions import AutocompleteSelectError
-from modron.model import ModronPlugin
-from modron.utils import GuildContext
+from modron.utils import GuildContext, ModronPlugin
 
 plugin = ModronPlugin()
 
