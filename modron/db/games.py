@@ -313,7 +313,7 @@ class GameDB(DBConn):
         )
 
         return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
-    
+
     @with_conn
     async def autocomplete_involved(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
