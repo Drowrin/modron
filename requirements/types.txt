@@ -1,4 +1,4 @@
-pyright==1.1.301
+pyright==1.1.303
 
 types-pyyaml==6.0.12.9
 asyncpg-stubs==0.27.0
