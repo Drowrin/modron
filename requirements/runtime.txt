@@ -1,5 +1,5 @@
 uvloop==0.17.0; os_name != 'nt'
-hikari[speedups]==2.0.0.dev117
+hikari[speedups]==2.0.0.dev119
 hikari-crescent[cron]==0.6.0
 hikari-flare==0.1.0
 hikari-toolbox==0.1.5
