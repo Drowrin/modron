@@ -32,8 +32,8 @@ class PlayerDB(DBConn):
             game_id,
         )
 
-    @with_conn
     @convert(Player)
+    @with_conn
     async def get(self, conn: Conn, *, game_id: int, user_id: int):
         return await conn.fetchrow(
             """
