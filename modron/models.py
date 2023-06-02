@@ -7,18 +7,23 @@ from enum import Enum
 import attrs
 import hikari
 
+from modron.db.conn import Record
+
 
 def snowflake_or_none_converter(value: int | None) -> hikari.Snowflake | None:
     if value is None:
         return None
     return hikari.Snowflake(value)
 
+def snowflake_converter(snowflake: int) -> hikari.Snowflake:
+    return hikari.Snowflake(snowflake)
+
 
 @attrs.define(kw_only=True)
 class SystemLite:
     system_id: int
 
-    guild_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
+    guild_id: hikari.Snowflake = attrs.field(converter=snowflake_converter)
 
     name: str
     abbreviation: str
@@ -44,9 +49,13 @@ class SystemLite:
         return hikari.CustomEmoji(id=self.emoji_id, name=self.emoji_name, is_animated=self.emoji_animated)
 
 
+def games_converter(rs: list[Record]) -> list[GameLite]:
+    return [GameLite(**r) for r in rs]
+
+
 @attrs.define(kw_only=True)
 class System(SystemLite):
-    games: list[GameLite] = attrs.field(converter=lambda rs: [GameLite(**r) for r in rs])
+    games: list[GameLite] = attrs.field(converter=games_converter)
 
     def __attrs_post_init__(self) -> None:
         for g in self.games:
@@ -71,6 +80,10 @@ def system_converter(rs: list[dict[str, typing.Any]] | SystemLite | None):
     return next((SystemLite(**r) for r in rs), None)
 
 
+def game_status_converter(s: str) -> GameStatus:
+    return GameStatus[s.upper()]
+
+
 @attrs.define(kw_only=True)
 class GameLite:
     game_id: int
@@ -78,15 +91,15 @@ class GameLite:
     system_id: int | None = None
     system: SystemLite | None = attrs.field(converter=system_converter, default=None)
 
-    guild_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
-    author_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
+    guild_id: hikari.Snowflake = attrs.field(converter=snowflake_converter)
+    author_id: hikari.Snowflake = attrs.field(converter=snowflake_converter)
 
     name: str
     abbreviation: str = attrs.field()
     description: str | None = None
     image: str | None = None
 
-    status: GameStatus = attrs.field(converter=lambda s: GameStatus[s.upper()])
+    status: GameStatus = attrs.field(converter=game_status_converter)
     seeking_players: bool
 
     created_at: datetime
@@ -122,10 +135,18 @@ class GameLite:
         return self.system.player_label
 
 
+def characters_converter(rs: list[Record]) -> list[Character]:
+    return [Character(**r) for r in rs]
+
+
+def players_converter(rs: list[Record]) -> list[Player]:
+    return [Player(**r) for r in rs]
+
+
 @attrs.define(kw_only=True)
 class Game(GameLite):
-    characters: list[Character] = attrs.field(converter=lambda rs: [Character(**r) for r in rs])
-    players: list[Player] = attrs.field(converter=lambda rs: [Player(**r) for r in rs])
+    characters: list[Character] = attrs.field(converter=characters_converter)
+    players: list[Player] = attrs.field(converter=players_converter)
 
     def get_character_for(self, player: Player) -> Character | None:
         return next((c for c in self.characters if c.character_id == player.character_id), None)
@@ -138,7 +159,7 @@ class Game(GameLite):
 class Character:
     character_id: int
     game_id: int
-    author_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
+    author_id: hikari.Snowflake = attrs.field(converter=snowflake_converter)
 
     name: str
 
@@ -152,7 +173,7 @@ class Character:
 
 @attrs.define(kw_only=True)
 class Player:
-    user_id: hikari.Snowflake = attrs.field(converter=hikari.Snowflake)
+    user_id: hikari.Snowflake = attrs.field(converter=snowflake_converter)
     game_id: int
 
     character_id: int | None = None
