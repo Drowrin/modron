@@ -6,8 +6,8 @@ from modron.models import System, SystemLite
 
 
 class SystemDB(DBConn):
-    @with_conn
     @convert(SystemLite)
+    @with_conn
     async def insert(
         self,
         conn: Conn,
@@ -53,8 +53,8 @@ class SystemDB(DBConn):
             emoji_animated,
         )
 
-    @with_conn
     @convert(SystemLite)
+    @with_conn
     async def get_lite(self, conn: Conn, *, system_id: int, guild_id: int):
         return await conn.fetchrow(
             """
@@ -67,8 +67,8 @@ class SystemDB(DBConn):
             guild_id,
         )
 
-    @with_conn
     @convert(System)
+    @with_conn
     async def get(self, conn: Conn, *, system_id: int, guild_id: int):
         return await conn.fetchrow(
             """

@@ -21,8 +21,8 @@ class CharacterDB(DBConn):
 
         return val
 
-    @with_conn
     @convert(Character)
+    @with_conn
     async def insert(
         self,
         conn: Conn,
