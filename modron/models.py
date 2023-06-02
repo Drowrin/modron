@@ -15,6 +15,7 @@ def snowflake_or_none_converter(value: int | None) -> hikari.Snowflake | None:
         return None
     return hikari.Snowflake(value)
 
+
 def snowflake_converter(snowflake: int) -> hikari.Snowflake:
     return hikari.Snowflake(snowflake)
 
