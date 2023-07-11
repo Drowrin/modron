@@ -87,3 +87,19 @@ class PlayerDB(DBConn):
             game_id,
             user_id,
         )
+
+    @with_conn
+    async def exists(self, conn: Conn, *, game_id: int, user_id: int) -> bool:
+        return await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT NULL
+                FROM Players
+                WHERE
+                    user_id = $2
+                    AND game_id = $1;
+            )
+            """,
+            game_id,
+            user_id,
+        )

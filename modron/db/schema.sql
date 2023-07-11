@@ -66,8 +66,8 @@ CREATE TABLE IF NOT EXISTS Characters (
 
     image VARCHAR(256),
 
-    brief VARCHAR(256) NOT NULL,
-    description VARCHAR(4096) NOT NULL,
+    brief VARCHAR(128),
+    description VARCHAR(1024),
 
     CONSTRAINT characters_pk PRIMARY KEY (character_id),
     CONSTRAINT characters_game_fk FOREIGN KEY (game_id) REFERENCES Games (game_id) ON DELETE CASCADE

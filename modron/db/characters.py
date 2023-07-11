@@ -30,8 +30,8 @@ class CharacterDB(DBConn):
         game_id: int,
         author_id: int,
         name: str,
-        brief: str,
-        description: str,
+        brief: str | None = None,
+        description: str | None = None,
         pronouns: str | None = None,
         image: str | None = None,
     ):
