@@ -7,8 +7,8 @@ from modron.models import Game, GameLite
 
 
 class GameDB(DBConn):
-    @convert(GameLite)
     @with_conn
+    @convert(GameLite)
     async def insert(
         self,
         conn: Conn,
@@ -37,8 +37,8 @@ class GameDB(DBConn):
             image,
         )
 
-    @convert(GameLite)
     @with_conn
+    @convert(GameLite)
     async def get_lite(self, conn: Conn, *, game_id: int, guild_id: int):
         return await conn.fetchrow(
             """
@@ -56,8 +56,8 @@ class GameDB(DBConn):
             guild_id,
         )
 
-    @convert(Game)
     @with_conn
+    @convert(Game)
     async def get(self, conn: Conn, *, game_id: int, guild_id: int):
         return await conn.fetchrow(
             """

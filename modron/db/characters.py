@@ -18,8 +18,8 @@ class CharacterDB(DBConn):
 
         return val
 
-    @convert(Character)
     @with_conn
+    @convert(Character)
     async def insert(
         self,
         conn: Conn,
