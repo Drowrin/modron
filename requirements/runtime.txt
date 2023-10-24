@@ -1,4 +1,4 @@
-uvloop==0.17.0; os_name != 'nt'
+uvloop==0.19.0; os_name != 'nt'
 hikari[speedups]==2.0.0.dev121
 hikari-crescent[cron]==0.6.0
 hikari-flare==0.1.3
