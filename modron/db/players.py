@@ -1,3 +1,5 @@
+import hikari
+
 from modron.db.conn import Conn, DBConn, convert, with_conn
 from modron.models import Player
 
@@ -48,7 +50,16 @@ class PlayerDB(DBConn):
         )
 
     @with_conn
-    async def update(self, conn: Conn, *, game_id: int, user_id: int, character_id: int | None = None) -> None:
+    async def update(
+        self,
+        conn: Conn,
+        *,
+        game_id: int,
+        user_id: int,
+        character_id: hikari.UndefinedNoneOr[int] = hikari.UNDEFINED,
+    ) -> None:
+        if character_id is hikari.UNDEFINED:
+            return
         await conn.execute(
             """
             UPDATE Players
@@ -72,6 +83,22 @@ class PlayerDB(DBConn):
             WHERE
                 game_id = $1
                 AND user_id = $2;
+            """,
+            game_id,
+            user_id,
+        )
+
+    @with_conn
+    async def exists(self, conn: Conn, *, game_id: int, user_id: int) -> bool:
+        return await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT NULL
+                FROM Players
+                WHERE
+                    user_id = $2
+                    AND game_id = $1;
+            )
             """,
             game_id,
             user_id,

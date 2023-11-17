@@ -135,7 +135,7 @@ class Renderer:
             name=member.display_name, icon=member.display_avatar_url
         )
 
-    async def character(self, game: Game, character: Character, description: bool = False) -> hikari.Embed:
+    async def character(self, game: Game, character: Character, *, description: bool = False) -> hikari.Embed:
         embed = hikari.Embed(title=character.name)
         embed.set_thumbnail(character.image)
         if character.pronouns is not None:

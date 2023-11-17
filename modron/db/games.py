@@ -84,7 +84,7 @@ class GameDB(DBConn):
         return await conn.fetchval(
             """
             SELECT EXISTS(
-                SELECT 1
+                SELECT NULL
                 from Games
                 WHERE
                     guild_id = $1
@@ -100,7 +100,7 @@ class GameDB(DBConn):
         return await conn.fetchval(
             """
             SELECT EXISTS(
-                SELECT 1
+                SELECT NULL
                 from Games
                 WHERE
                     guild_id = $1
@@ -300,6 +300,40 @@ class GameDB(DBConn):
                     WHERE
                         p.game_id = g.game_id
                         AND p.user_id = $2
+                )
+                AND (
+                    g.name ILIKE $3
+                    OR g.abbreviation ILIKE $3
+                )
+            LIMIT 25;
+            """,
+            ctx.guild_id,
+            ctx.user.id,
+            f"{option.value}%",
+        )
+
+        return [(r[1], str(r[0])) for r in results]
+
+    @with_conn
+    async def autocomplete_involved(
+        self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
+    ) -> list[tuple[str, str]]:
+        results = await conn.fetch(
+            """
+            SELECT
+                g.game_id, g.name
+            FROM Games AS g
+            WHERE
+                g.guild_id = $1
+                AND (
+                    g.author_id = $2
+                    OR EXISTS (
+                        SELECT NULL
+                        FROM Players AS p
+                        WHERE
+                            p.game_id = g.game_id
+                            AND p.user_id = $2
+                    )
                 )
                 AND (
                     g.name ILIKE $3
