@@ -124,9 +124,9 @@ class CharacterCreate:
         except ValueError as err:
             raise AutocompleteSelectError() from err
 
-        if not plugin.model.games.id_exists(guild_id=ctx.guild_id, game_id=game_id):
+        if not await plugin.model.games.id_exists(guild_id=ctx.guild_id, game_id=game_id):
             raise AutocompleteSelectError()
-        if not plugin.model.players.exists(game_id=game_id, user_id=ctx.user.id):
+        if not await plugin.model.players.exists(game_id=game_id, user_id=ctx.user.id):
             raise AutocompleteSelectError()
 
         await ctx.defer(ephemeral=True)

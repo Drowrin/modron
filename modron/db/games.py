@@ -317,7 +317,7 @@ class GameDB(DBConn):
     @with_conn
     async def autocomplete_involved(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-    ) -> list[hikari.CommandChoice]:
+    ) -> list[tuple[str, str]]:
         results = await conn.fetch(
             """
             SELECT
