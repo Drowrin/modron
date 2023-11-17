@@ -185,7 +185,7 @@ class GameDB(DBConn):
     @with_conn
     async def autocomplete_guild(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-    ) -> list[hikari.CommandChoice]:
+    ) -> list[tuple[str, str]]:
         results = await conn.fetch(
             """
             SELECT
@@ -203,12 +203,12 @@ class GameDB(DBConn):
             f"{option.value}%",
         )
 
-        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
+        return [(r[1], str(r[0])) for r in results]
 
     @with_conn
     async def autocomplete_editable(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-    ) -> list[hikari.CommandChoice]:
+    ) -> list[tuple[str, str]]:
         assert ctx.member is not None
         perms = toolbox.members.calculate_permissions(ctx.member)
         if (perms & hikari.Permissions.MANAGE_GUILD) == hikari.Permissions.MANAGE_GUILD:
@@ -248,12 +248,12 @@ class GameDB(DBConn):
                 ctx.user.id,
             )
 
-        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
+        return [(r[1], str(r[0])) for r in results]
 
     @with_conn
     async def autocomplete_joinable(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-    ) -> list[hikari.CommandChoice]:
+    ) -> list[tuple[str, str]]:
         results = await conn.fetch(
             """
             SELECT
@@ -281,12 +281,12 @@ class GameDB(DBConn):
             f"{option.value}%",
         )
 
-        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
+        return [(r[1], str(r[0])) for r in results]
 
     @with_conn
     async def autocomplete_joined(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-    ) -> list[hikari.CommandChoice]:
+    ) -> list[tuple[str, str]]:
         results = await conn.fetch(
             """
             SELECT
@@ -312,4 +312,4 @@ class GameDB(DBConn):
             f"{option.value}%",
         )
 
-        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
+        return [(r[1], str(r[0])) for r in results]

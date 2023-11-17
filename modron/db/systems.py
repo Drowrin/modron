@@ -182,7 +182,7 @@ class SystemDB(DBConn):
     @with_conn
     async def autocomplete(
         self, conn: Conn, ctx: crescent.AutocompleteContext, option: hikari.AutocompleteInteractionOption
-    ) -> list[hikari.CommandChoice]:
+    ) -> list[tuple[str, str]]:
         results = await conn.fetch(
             """
             SELECT
@@ -200,4 +200,4 @@ class SystemDB(DBConn):
             f"{option.value}%",
         )
 
-        return [hikari.CommandChoice(name=r[1], value=str(r[0])) for r in results]
+        return [(r[1], str(r[0])) for r in results]
