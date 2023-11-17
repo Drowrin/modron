@@ -261,6 +261,14 @@ ChannelKind = typing.Literal["main", "info", "synopsis", "voice", "category"]
 ConnectionKind = typing.Literal["role"] | ChannelKind
 
 
+class ChannelUpdate(typing.TypedDict):
+    category_channel_id: int | None
+    main_channel_id: int | None
+    info_channel_id: int | None
+    synopsis_channel_id: int | None
+    voice_channel_id: int | None
+
+
 class ConnectionKindSelect(flare.TextSelect, min_values=1, max_values=1):
     game_id: int
     author_id: int
@@ -364,7 +372,7 @@ class GameChannelSelect(flare.ChannelSelect, min_values=0, max_values=1):
             game_id=self.game_id,
             guild_id=ctx.guild_id,
             author_id=ctx.user.id,
-            **{f"{self.kind}_channel_id": next((c.id for c in ctx.channels), None)},
+            **typing.cast(ChannelUpdate, {f"{self.kind}_channel_id": next((int(c.id) for c in ctx.channels), None)}),
         )
 
         game = await plugin.model.games.get(game_id=self.game_id, guild_id=ctx.guild_id)

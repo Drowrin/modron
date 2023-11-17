@@ -18,8 +18,8 @@ async def get_me(app: hikari.RESTAware) -> hikari.OwnUser:
 
 class GuildContext(crescent.Context):
     # these are always available in commands that are not allowed in DMs
-    guild_id: hikari.Snowflake
-    member: hikari.Member
+    guild_id: hikari.Snowflake  # type: ignore
+    member: hikari.Member  # type: ignore
 
 
 class Response(typing.TypedDict):
