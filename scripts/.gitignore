@@ -1,2 +1,3 @@
 *.py
 !devenv.py
+!reset-schema.py

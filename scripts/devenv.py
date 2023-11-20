@@ -1,3 +1,8 @@
+import os
+import sys
+
+sys.path.insert(0, os.getcwd())
+
 import functools
 import typing
 from pathlib import Path
@@ -35,3 +40,14 @@ def with_model(f: SigT[Model, SpecT, ReturnT]) -> OutSigT[SpecT, ReturnT]:
             await model.close()
 
     return inner
+
+
+async def reset_schema(model: Model):
+    await model.db_pool.execute("DROP TABLE IF EXISTS Players;")
+    await model.db_pool.execute("DROP TABLE IF EXISTS Characters;")
+    await model.db_pool.execute("DROP TABLE IF EXISTS Games;")
+    await model.db_pool.execute("DROP TABLE IF EXISTS Systems;")
+    await model.db_pool.execute("DROP TYPE IF EXISTS game_status;")
+
+    with open(Path("modron/db/schema.sql")) as f:
+        await model.db_pool.execute(f.read())
