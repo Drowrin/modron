@@ -238,8 +238,8 @@ class SystemCreateModal(flare.Modal, title="New System"):
             guild_id=ctx.guild_id,
             name=self.name.value,
             # replace '' with None
-            author_label=self.author_label.value or None,
-            player_label=self.player_label.value or None,
+            author_label=self.author_label.value,
+            player_label=self.player_label.value,
             description=self.description.value or None,
             image=self.image.value or None,
         )
