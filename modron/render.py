@@ -27,7 +27,7 @@ class Renderer:
 
     async def system(self, system: SystemLite, *, description: bool = False) -> hikari.Embed:
         embed = (
-            hikari.Embed(title=f"{system.emoji} {system.name}")
+            hikari.Embed(title=f"{system.emoji} {system.name}" if system.emoji is not None else system.name)
             .set_thumbnail(system.image)
             .add_field("Author Label", system.author_label, inline=True)
             .add_field("Player Label", system.player_label, inline=True)
@@ -85,7 +85,13 @@ class Renderer:
             embed.description = f"Abbreviated as `{game.abbreviation}`"
 
         if game.system is not None:
-            embed.add_field("System", f"{game.system.emoji} {game.system.abbreviation}", inline=True)
+            embed.add_field(
+                "System",
+                f"{game.system.emoji} {game.system.abbreviation}"
+                if game.system.emoji is not None
+                else game.system.abbreviation,
+                inline=True,
+            )
 
         embed.add_field("Status", game.status_str, inline=True)
         embed.add_field(
