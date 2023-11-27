@@ -4,6 +4,10 @@ updates:
     directory: "/requirements"
     schedule:
       interval: "daily"
+    groups:
+      hikari-ecosystem:
+        patterns:
+          - "hikari*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
