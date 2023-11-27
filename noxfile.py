@@ -30,5 +30,5 @@ def fixes(session: nox.Session):
 def typecheck(session: nox.Session):
     session.install("-r", "requirements/runtime.txt")
     session.install("-r", "requirements/types.txt")
-    
+
     session.run("pyright", *INCLUDED)
