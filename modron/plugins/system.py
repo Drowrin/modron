@@ -56,7 +56,9 @@ async def settings_view(system: SystemLite) -> Response:
 
 
 async def emoji_settings_view(system_id: int, seconds: int) -> Response:
-    timestamp = toolbox.strings.format_dt(toolbox.strings.utcnow() + datetime.timedelta(seconds=seconds), "R")
+    timestamp = toolbox.strings.format_dt(
+        toolbox.strings.utcnow() + datetime.timedelta(seconds=seconds), toolbox.strings.TimestampStyle.RELATIVE
+    )
     return {
         "content": None,
         "embeds": [
