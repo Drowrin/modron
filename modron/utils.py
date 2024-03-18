@@ -28,5 +28,4 @@ class Response(typing.TypedDict):
     components: typing.Sequence[hikari.api.ComponentBuilder]
 
 
-class ModronPlugin(crescent.Plugin[hikari.GatewayBot, Model]):
-    ...
+class ModronPlugin(crescent.Plugin[hikari.GatewayBot, Model]): ...

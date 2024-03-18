@@ -87,9 +87,11 @@ class Renderer:
         if game.system is not None:
             embed.add_field(
                 "System",
-                f"{game.system.emoji} {game.system.abbreviation}"
-                if game.system.emoji is not None
-                else game.system.abbreviation,
+                (
+                    f"{game.system.emoji} {game.system.abbreviation}"
+                    if game.system.emoji is not None
+                    else game.system.abbreviation
+                ),
                 inline=True,
             )
 
